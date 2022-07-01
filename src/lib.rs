@@ -91,7 +91,7 @@ pub struct FlatPageStore {
     /// The folder containing flat pages
     root: PathBuf,
     /// Maps file stems to pages metadata
-    pages: HashMap<String, FlatPageMeta>,
+    pub pages: HashMap<String, FlatPageMeta>,
 }
 
 /// Flat page metadata
