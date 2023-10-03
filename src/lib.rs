@@ -253,14 +253,14 @@ impl Frontmatter {
 
         let prefix = parts.next().unwrap(); // `splitn` should always return at least one item
         if !prefix.is_empty() {
-            // content doesn't start from the delimeter
+            // content doesn't start from the delimiter
             return Ok((None, content));
         }
 
         let matter_str = if let Some(s) = parts.next() {
             s
         } else {
-            // no first opening delimeter
+            // no first opening delimiter
             return Ok((None, content));
         };
 
@@ -354,7 +354,7 @@ mod tests {
         assert!(m.is_none());
         assert_eq!(b, text);
 
-        println!("No closing delimeter");
+        println!("No closing delimiter");
         let text = "---\ntitle: bar\nbaz";
         let (m, b) = Frontmatter::parse(text).unwrap();
         assert!(m.is_none());
