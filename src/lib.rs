@@ -37,6 +37,19 @@
 //! }
 //! ```
 //!
+//! ## Extra frontmatter fields
+//!
+//! You can define extra statically typed frontmatter fields
+//!
+//! ```rust
+//! #[derive(Debug, serde::Deserialize)]
+//! struct Extra {
+//!     slug: String,
+//! }
+//!
+//! let _page = flatpage::FlatPage::<Extra>::by_url("./", "/").unwrap();
+//! ```
+//!
 //! ## Cached metadata
 //!
 //! It's a common for a page to have a list of related pages. To avoid reading all the files each
@@ -108,6 +121,7 @@ pub struct FlatPageMeta {
 }
 
 /// Flat page
+/// The generic parameter `E` is used to define extra frontmatter fields
 #[derive(Debug)]
 pub struct FlatPage<E = ()> {
     /// Title - for html title tag, `og:title`, etc
