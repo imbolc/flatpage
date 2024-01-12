@@ -33,7 +33,7 @@ the first line would be considered the title (and cleaned from possible header m
 
 ```rust
 let root_folder = "./";
-if let Some(home) = flatpage::FlatPage::by_url(root_folder, "/").unwrap() {
+if let Some(home) = flatpage::FlatPage::<()>::by_url(root_folder, "/").unwrap() {
     println!("title: {}", home.title);
     println!("description: {:?}", home.description);
     println!("markdown body: {}", home.body);

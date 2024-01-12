@@ -1,6 +1,8 @@
 [hooks]
 pre-commit = """\
-    cargo fmt -- --check \
+    set -x \
+    && cargo sort -c \
+    && cargo fmt -- --check \
     && cargo test --all-features --workspace --bins --examples --tests \
     && cargo test --doc \
     && cargo clippy --all-features --workspace --bins --examples --tests -- -D warnings \

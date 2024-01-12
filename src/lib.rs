@@ -27,7 +27,7 @@
 //!
 //! ```rust
 //! let root_folder = "./";
-//! if let Some(home) = flatpage::FlatPage::by_url(root_folder, "/").unwrap() {
+//! if let Some(home) = flatpage::FlatPage::<()>::by_url(root_folder, "/").unwrap() {
 //!     println!("title: {}", home.title);
 //!     println!("description: {:?}", home.description);
 //!     println!("markdown body: {}", home.body);
@@ -62,12 +62,16 @@
 #![forbid(unsafe_code)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 use displaydoc::Display;
+use frontmatter::Frontmatter;
+use serde::de::DeserializeOwned;
 use std::{
     collections::HashMap,
     fs, io,
     path::{Path, PathBuf},
 };
 use thiserror::Error;
+
+mod frontmatter;
 
 const ALLOWED_IN_URL: &str = "/_-";
 
@@ -105,21 +109,15 @@ pub struct FlatPageMeta {
 
 /// Flat page
 #[derive(Debug)]
-pub struct FlatPage {
+pub struct FlatPage<E = ()> {
     /// Title - for html title tag, `og:title`, etc
     pub title: String,
     /// Description - for html meta description, `og:description`, etc
     pub description: Option<String>,
     /// Raw markdown version of the body
     pub body: String,
-}
-
-/// Flat page yaml-based frontmatter
-#[derive(Debug, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Frontmatter {
-    title: Option<String>,
-    description: Option<String>,
+    /// Extra frontmatter fields (except of `title` and `description`)
+    pub extra: E,
 }
 
 impl FlatPageStore {
@@ -154,7 +152,7 @@ impl FlatPageStore {
     }
 
     /// Returns a page by its url
-    pub fn page_by_url(&self, url: &str) -> Result<Option<FlatPage>> {
+    pub fn page_by_url<E: DeserializeOwned>(&self, url: &str) -> Result<Option<FlatPage<E>>> {
         let stem = Self::url_to_stem(url);
         self.page_by_stem(&stem)
     }
@@ -165,7 +163,7 @@ impl FlatPageStore {
     }
 
     /// Returns a page by the file stem
-    pub fn page_by_stem(&self, stem: &str) -> Result<Option<FlatPage>> {
+    pub fn page_by_stem<E: DeserializeOwned>(&self, stem: &str) -> Result<Option<FlatPage<E>>> {
         if self.pages.contains_key(stem) {
             let mut path = self.root.clone();
             path.push(format!("{stem}.md"));
@@ -181,7 +179,7 @@ impl FlatPageStore {
     }
 }
 
-impl FlatPage {
+impl<E: DeserializeOwned> FlatPage<E> {
     /// Returns a page by its url
     pub fn by_url(root: impl Into<PathBuf>, url: &str) -> Result<Option<Self>> {
         let filename = match url_to_filename(url) {
@@ -212,26 +210,21 @@ impl FlatPage {
 
     /// Parses a page from text
     fn from_content(content: &str) -> serde_yaml::Result<Self> {
-        let (maybe_matter, body) = Frontmatter::parse(content)?;
-        let page = if let Some(matter) = maybe_matter {
-            let title = matter
-                .title
-                .unwrap_or_else(|| title_from_markdown(body).into());
-            let description = matter.description;
-            Self {
+        let (
+            Frontmatter {
                 title,
                 description,
-                body: body.to_string(),
-            }
-        } else {
-            let title = title_from_markdown(content).into();
-            Self {
-                title,
-                description: None,
-                body: content.to_string(),
-            }
-        };
-        Ok(page)
+                extra,
+            },
+            body,
+        ) = Frontmatter::parse(content)?;
+        let title = title.unwrap_or_else(|| title_from_markdown(body).to_string());
+        Ok(Self {
+            title,
+            description,
+            body: body.to_string(),
+            extra,
+        })
     }
 }
 
@@ -241,38 +234,6 @@ impl From<FlatPage> for FlatPageMeta {
             title: p.title,
             description: p.description,
         }
-    }
-}
-
-impl Frontmatter {
-    /// Parses frontmatter from the file content, returns the frontmatter and the rest of the
-    /// content (page body)
-    fn parse(content: &str) -> serde_yaml::Result<(Option<Self>, &str)> {
-        let content = content.trim();
-        let mut parts = content.splitn(3, "---");
-
-        let prefix = parts.next().unwrap(); // `splitn` should always return at least one item
-        if !prefix.is_empty() {
-            // content doesn't start from the delimiter
-            return Ok((None, content));
-        }
-
-        let matter_str = if let Some(s) = parts.next() {
-            s
-        } else {
-            // no first opening delimiter
-            return Ok((None, content));
-        };
-
-        let body = if let Some(s) = parts.next() {
-            s
-        } else {
-            // no closing delimiter
-            return Ok((None, content));
-        };
-
-        let matter = serde_yaml::from_str(matter_str)?;
-        Ok((Some(matter), body.trim()))
     }
 }
 
@@ -335,57 +296,12 @@ mod tests {
     }
 
     #[test]
-    fn test_frontmatter_from_content() {
-        println!("No starting delimiter");
-        let text = "foo";
-        let (m, b) = Frontmatter::parse(text).unwrap();
-        assert!(m.is_none());
-        assert_eq!(b, text);
-
-        println!("Starting delimiter inside content");
-        let text = "foo\n---\nfoo: bar\n---\nbody";
-        let (m, b) = Frontmatter::parse(text).unwrap();
-        assert!(m.is_none());
-        assert_eq!(b, text);
-
-        println!("Just the starting delimiter");
-        let text = "---";
-        let (m, b) = Frontmatter::parse(text).unwrap();
-        assert!(m.is_none());
-        assert_eq!(b, text);
-
-        println!("No closing delimiter");
-        let text = "---\ntitle: bar\nbaz";
-        let (m, b) = Frontmatter::parse(text).unwrap();
-        assert!(m.is_none());
-        assert_eq!(b, text);
-
-        println!("Empty frontmatter");
-        assert!(Frontmatter::parse("---\n\n---").is_err());
-
-        println!("Unknown field");
-        assert!(Frontmatter::parse("---\nunknown_field: bar\n---").is_err());
-
-        println!("Empty body");
-        let text = "---\ntitle: foo\n---";
-        let (m, b) = Frontmatter::parse(text).unwrap();
-        assert_eq!(m.unwrap().title.unwrap(), "foo");
-        assert_eq!(b, "");
-
-        println!("Title with body");
-        let text = "---\ntitle: foo\n---\nbar";
-        let (m, b) = Frontmatter::parse(text).unwrap();
-        assert_eq!(m.unwrap().title.unwrap(), "foo");
-        assert_eq!(b, "bar");
-    }
-
-    #[test]
     fn test_flatpage_title() {
-        let page = FlatPage::from_content("# Foo").unwrap();
+        let page = FlatPage::<()>::from_content("# Foo").unwrap();
         assert_eq!(page.title, "Foo");
         assert_eq!(page.body, "# Foo");
         assert_eq!(
-            FlatPage::from_content("---\ntitle: Bar\n---\n# Foo")
+            FlatPage::<()>::from_content("---\ntitle: Bar\n---\n# Foo")
                 .unwrap()
                 .title,
             "Bar"
@@ -394,9 +310,9 @@ mod tests {
 
     #[test]
     fn test_flatpage_description() {
-        assert_eq!(FlatPage::from_content("").unwrap().description, None);
+        assert_eq!(FlatPage::<()>::from_content("").unwrap().description, None);
         assert_eq!(
-            FlatPage::from_content("---\ndescription: Bar\n---")
+            FlatPage::<()>::from_content("---\ndescription: Bar\n---")
                 .unwrap()
                 .description
                 .unwrap(),
@@ -405,20 +321,36 @@ mod tests {
     }
 
     #[test]
-    fn test_doc_table() {
-        let page = FlatPage::from_content("# Foo\nBar").unwrap();
+    fn extra_fields() {
+        #[derive(Debug, serde::Deserialize)]
+        struct Extra {
+            slug: String,
+        }
+        assert!(FlatPage::<Extra>::from_content("").is_err());
+        assert_eq!(
+            FlatPage::<Extra>::from_content("---\nslug: foo\n---")
+                .unwrap()
+                .extra
+                .slug,
+            "foo"
+        );
+    }
+
+    #[test]
+    fn test_docs_table() {
+        let page = FlatPage::<()>::from_content("# Foo\nBar").unwrap();
         assert_eq!(page.title, "Foo");
         assert!(page.description.is_none());
         assert_eq!(page.body, "# Foo\nBar");
         assert_eq!(page.html(), "<h1>Foo</h1>\n<p>Bar</p>\n");
 
-        let page = FlatPage::from_content("---\ndescription: Bar\n---\n# Foo").unwrap();
+        let page = FlatPage::<()>::from_content("---\ndescription: Bar\n---\n# Foo").unwrap();
         assert_eq!(page.title, "Foo");
         assert_eq!(page.description.as_deref().unwrap(), "Bar");
         assert_eq!(page.body, "# Foo");
         assert_eq!(page.html(), "<h1>Foo</h1>\n");
 
-        let page = FlatPage::from_content("---\ntitle: Foo\ndescription: Bar\n---").unwrap();
+        let page = FlatPage::<()>::from_content("---\ntitle: Foo\ndescription: Bar\n---").unwrap();
         assert_eq!(page.title, "Foo");
         assert_eq!(page.description.as_deref().unwrap(), "Bar");
         assert_eq!(page.body, "");
