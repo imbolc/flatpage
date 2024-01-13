@@ -74,51 +74,21 @@
 #![warn(clippy::all, missing_docs, nonstandard_style, future_incompatible)]
 #![forbid(unsafe_code)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-use displaydoc::Display;
 use frontmatter::Frontmatter;
 use serde::de::DeserializeOwned;
 use std::{
-    collections::HashMap,
-    fs, io,
+    fs,
     path::{Path, PathBuf},
 };
-use thiserror::Error;
 
+mod error;
 mod frontmatter;
+mod store;
+
+pub use error::{Error, Result};
+pub use store::{FlatPageMeta, FlatPageStore};
 
 const ALLOWED_IN_URL: &str = "/_-";
-
-/// The crates error type
-#[derive(Debug, Display, Error)]
-pub enum Error {
-    /// broken frontmatter yaml in `{1}`
-    Frontmatter(#[source] serde_yaml::Error, String),
-    /// readdir `{1}`
-    ReadDir(#[source] io::Error, PathBuf),
-    /// readdir entry
-    DirEntry(#[source] io::Error),
-}
-
-/// The crates result type
-pub type Result<T> = std::result::Result<T, Error>;
-
-/// A store for [`FlatPageMeta`]
-#[derive(Debug)]
-pub struct FlatPageStore {
-    /// The folder containing flat pages
-    root: PathBuf,
-    /// Maps file stems to pages metadata
-    pub pages: HashMap<String, FlatPageMeta>,
-}
-
-/// Flat page metadata
-#[derive(Debug)]
-pub struct FlatPageMeta {
-    /// Page title
-    pub title: String,
-    /// Page description
-    pub description: Option<String>,
-}
 
 /// Flat page
 /// The generic parameter `E` is used to define extra frontmatter fields
@@ -132,65 +102,6 @@ pub struct FlatPage<E = ()> {
     pub body: String,
     /// Extra frontmatter fields (except of `title` and `description`)
     pub extra: E,
-}
-
-impl FlatPageStore {
-    /// Creates a store from the folder
-    pub fn read_dir(root: impl Into<PathBuf>) -> Result<Self> {
-        let root = root.into();
-        let mut pages = HashMap::new();
-        let md_ext = Some(std::ffi::OsStr::new("md"));
-        for entry in fs::read_dir(&root).map_err(|e| Error::ReadDir(e, root.clone()))? {
-            let entry = entry.map_err(Error::DirEntry)?;
-            let path = entry.path();
-            if !path.is_file() || path.extension() != md_ext {
-                continue;
-            }
-            let stem = match path.file_stem().and_then(|x| x.to_str()) {
-                Some(s) => s,
-                None => continue,
-            };
-            let page = match FlatPage::by_path(&path)? {
-                Some(p) => p,
-                None => continue,
-            };
-            pages.insert(stem.into(), page.into());
-        }
-        Ok(Self { root, pages })
-    }
-
-    /// Returns a page metadata by its url
-    pub fn meta_by_url(&self, url: &str) -> Option<&FlatPageMeta> {
-        let stem = Self::url_to_stem(url);
-        self.meta_by_stem(&stem)
-    }
-
-    /// Returns a page by its url
-    pub fn page_by_url<E: DeserializeOwned>(&self, url: &str) -> Result<Option<FlatPage<E>>> {
-        let stem = Self::url_to_stem(url);
-        self.page_by_stem(&stem)
-    }
-
-    /// Returns a page metadata by the file stem
-    pub fn meta_by_stem(&self, stem: &str) -> Option<&FlatPageMeta> {
-        self.pages.get(stem)
-    }
-
-    /// Returns a page by the file stem
-    pub fn page_by_stem<E: DeserializeOwned>(&self, stem: &str) -> Result<Option<FlatPage<E>>> {
-        if self.pages.contains_key(stem) {
-            let mut path = self.root.clone();
-            path.push(format!("{stem}.md"));
-            FlatPage::by_path(path)
-        } else {
-            Ok(None)
-        }
-    }
-
-    /// Converts url to file stem
-    fn url_to_stem(url: &str) -> String {
-        url.replace('/', "^")
-    }
 }
 
 impl<E: DeserializeOwned> FlatPage<E> {
@@ -214,7 +125,7 @@ impl<E: DeserializeOwned> FlatPage<E> {
         };
         Self::from_content(&content)
             .map(Some)
-            .map_err(|e| Error::Frontmatter(e, path.display().to_string()))
+            .map_err(|e| Error::ParseFrontmatter(e, path.display().to_string()))
     }
 
     /// [`FlatPage::body`] rendered to html
@@ -239,15 +150,6 @@ impl<E: DeserializeOwned> FlatPage<E> {
             body: body.to_string(),
             extra,
         })
-    }
-}
-
-impl From<FlatPage> for FlatPageMeta {
-    fn from(p: FlatPage) -> Self {
-        Self {
-            title: p.title,
-            description: p.description,
-        }
     }
 }
 
@@ -310,7 +212,7 @@ mod tests {
     }
 
     #[test]
-    fn test_flatpage_title() {
+    fn flatpage_title() {
         let page = FlatPage::<()>::from_content("# Foo").unwrap();
         assert_eq!(page.title, "Foo");
         assert_eq!(page.body, "# Foo");
@@ -323,7 +225,7 @@ mod tests {
     }
 
     #[test]
-    fn test_flatpage_description() {
+    fn flatpage_description() {
         assert_eq!(FlatPage::<()>::from_content("").unwrap().description, None);
         assert_eq!(
             FlatPage::<()>::from_content("---\ndescription: Bar\n---")
@@ -351,7 +253,7 @@ mod tests {
     }
 
     #[test]
-    fn test_docs_table() {
+    fn docs_table() {
         let page = FlatPage::<()>::from_content("# Foo\nBar").unwrap();
         assert_eq!(page.title, "Foo");
         assert!(page.description.is_none());
