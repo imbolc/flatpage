@@ -14,10 +14,10 @@ pub(crate) struct Frontmatter<E = ()> {
 impl<E: DeserializeOwned> Frontmatter<E> {
     /// Parses frontmatter from markdown string.
     /// Returns the frontmatter and the rest of the content (page body)
-    pub(crate) fn parse(content: &str) -> serde_yaml::Result<(Self, &str)> {
+    pub(crate) fn parse(content: &str) -> serde_yml::Result<(Self, &str)> {
         let (matter, body) =
             split_frontmatter(content).unwrap_or_else(|| (EMPTY_YAML, content.trim()));
-        serde_yaml::from_str(matter).map(|m| (m, body))
+        serde_yml::from_str(matter).map(|m| (m, body))
     }
 }
 
@@ -42,7 +42,7 @@ mod tests {
 
     #[test]
     fn deserialize_empty_frontmatter() {
-        let parsed: Frontmatter = serde_yaml::from_str(EMPTY_YAML).unwrap();
+        let parsed: Frontmatter = serde_yml::from_str(EMPTY_YAML).unwrap();
         assert_eq!(parsed.title, None);
         assert_eq!(parsed.description, None);
     }
@@ -50,7 +50,7 @@ mod tests {
     #[test]
     fn deserialize_frontmatter_with_unknown_fields() {
         let yaml = "foo: 1\nbar: true";
-        let parsed: Frontmatter = serde_yaml::from_str(yaml).unwrap();
+        let parsed: Frontmatter = serde_yml::from_str(yaml).unwrap();
         assert_eq!(parsed.title, None);
         assert_eq!(parsed.description, None);
     }
@@ -58,7 +58,7 @@ mod tests {
     #[test]
     fn deserialize_frontmatter_with_only_title() {
         let yaml = "title: foo";
-        let parsed: Frontmatter = serde_yaml::from_str(yaml).unwrap();
+        let parsed: Frontmatter = serde_yml::from_str(yaml).unwrap();
         assert_eq!(parsed.title.unwrap(), "foo");
         assert_eq!(parsed.description, None);
     }
@@ -72,7 +72,7 @@ mod tests {
         }
 
         let yaml = "slug: foo\nactive: true";
-        let parsed: Frontmatter<Extra> = serde_yaml::from_str(yaml).unwrap();
+        let parsed: Frontmatter<Extra> = serde_yml::from_str(yaml).unwrap();
         assert_eq!(parsed.title, None);
         assert_eq!(parsed.description, None);
         assert_eq!(parsed.extra.slug, "foo");

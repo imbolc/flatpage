@@ -5,7 +5,7 @@ use std::{io, path::PathBuf};
 pub enum Error {
     /// Broken frontmatter
     #[error("broken frontmatter in '{1}'")]
-    ParseFrontmatter(#[source] serde_yaml::Error, String),
+    ParseFrontmatter(#[source] serde_yml::Error, String),
     /// Can't read folder
     #[error("readdir '{1}'")]
     ReadDir(#[source] io::Error, PathBuf),

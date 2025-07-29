@@ -61,7 +61,7 @@ impl<E: DeserializeOwned> FlatPage<E> {
     }
 
     /// Parses a page from text
-    fn from_content(content: &str) -> serde_yaml::Result<Self> {
+    fn from_content(content: &str) -> serde_yml::Result<Self> {
         let (
             Frontmatter {
                 title,
