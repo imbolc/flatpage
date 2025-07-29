@@ -1,6 +1,8 @@
-use crate::{Error, FlatPage, Result};
-use serde::de::DeserializeOwned;
 use std::{collections::HashMap, fs, path::PathBuf};
+
+use serde::de::DeserializeOwned;
+
+use crate::{Error, FlatPage, Result};
 
 /// A store for [`FlatPageMeta`]
 #[derive(Debug)]

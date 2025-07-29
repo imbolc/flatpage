@@ -1,10 +1,10 @@
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::{Deserialize, de::DeserializeOwned};
 
 const EMPTY_YAML: &str = "{}";
 
 /// Markdown frontmatter
 #[derive(Debug, Deserialize)]
-pub struct Frontmatter<E = ()> {
+pub(crate) struct Frontmatter<E = ()> {
     pub title: Option<String>,
     pub description: Option<String>,
     #[serde(flatten)]
@@ -14,14 +14,15 @@ pub struct Frontmatter<E = ()> {
 impl<E: DeserializeOwned> Frontmatter<E> {
     /// Parses frontmatter from markdown string.
     /// Returns the frontmatter and the rest of the content (page body)
-    pub fn parse(content: &str) -> serde_yaml::Result<(Self, &str)> {
+    pub(crate) fn parse(content: &str) -> serde_yaml::Result<(Self, &str)> {
         let (matter, body) =
             split_frontmatter(content).unwrap_or_else(|| (EMPTY_YAML, content.trim()));
         serde_yaml::from_str(matter).map(|m| (m, body))
     }
 }
 
-/// If frontmatter is found returns it and the rest of the body, `None` otherwise
+/// If frontmatter is found returns it and the rest of the body, `None`
+/// otherwise
 fn split_frontmatter(content: &str) -> Option<(&str, &str)> {
     let content = content.trim_start();
 

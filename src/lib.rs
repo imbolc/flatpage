@@ -1,85 +1,12 @@
-//! A simple file system based markdown flat page.
-//!
-//! ## Folder structure
-//!
-//! Only characters allowed in urls are ASCII, numbers and hyphen with underscore.
-//! Urls map to files by simply substituting `/` to `^` and adding `.md` extension.
-//! I believe it should eliminate all kinds of security issues.
-//!
-//! | url            | file name         |
-//! |----------------|-------------------|
-//! | `/`            | `^.md`            |
-//! | `/foo/bar-baz` | `^foo^bar-baz.md` |
-//!
-//! ## Page format
-//!
-//! File could provide title and description in a yaml-based frontmatter, if there's no frontmatter
-//! the first line would be considered the title (and cleaned from possible header marker `#`).
-//!
-//! | File content                                         | [`title`] | [`description`] | [`body`] | [`html()`]           |
-//! |------------------------------------------------------|---------------------|---------------------------|--------------------|--------------------------------|
-//! | `# Foo`<br>`Bar`                                     | `"Foo"`             | `None`                    | `"# Foo\nBar"`     | `"<h1>Foo</h1>\n<p>Bar</p>\n"` |
-//! | `---`<br>`description: Bar`<br>`---`<br>`# Foo`      | `"Foo"`             | `Some("Bar")`             | `"# Foo"`          | `"<h1>Foo</h1>\n"`             |
-//! | `---`<br>`title: Foo`<br>`description: Bar`<br>`---` | `"Foo"`             | `Some("Bar")`             | `""`               | `""`                           |
-//!
-//!
-//! ## Reading a page
-//!
-//! ```rust
-//! let root_folder = "./";
-//! if let Some(home) = flatpage::FlatPage::<()>::by_url(root_folder, "/").unwrap() {
-//!     println!("title: {}", home.title);
-//!     println!("description: {:?}", home.description);
-//!     println!("markdown body: {}", home.body);
-//!     println!("html body: {}", home.html());
-//! } else {
-//!     println!("No home page");
-//! }
-//! ```
-//!
-//! ## Extra frontmatter fields
-//!
-//! You can define extra statically typed frontmatter fields
-//!
-//! ```rust
-//! #[derive(Debug, serde::Deserialize)]
-//! struct Extra {
-//!     slug: String,
-//! }
-//!
-//! let _page = flatpage::FlatPage::<Extra>::by_url("./", "/").unwrap();
-//! ```
-//!
-//! ## Cached metadata
-//!
-//! It's a common for a page to have a list of related pages. To avoid reading all the files each
-//! time, you can use [`FlatPageStore`] to cache pages [`metadata`] (titles and descriptions).
-//!
-//! ```rust
-//! let root_folder = "./";
-//! let store = flatpage::FlatPageStore::read_dir(root_folder).unwrap();
-//! if let Some(meta) = store.meta_by_url("/") {
-//!     println!("title: {}", meta.title);
-//!     println!("description: {:?}", meta.description);
-//! } else {
-//!     println!("No home page");
-//! }
-//! ```
-//!
-//! [`title`]: FlatPage::title
-//! [`description`]: FlatPage::description
-//! [`body`]: FlatPage::body
-//! [`html()`]: FlatPage::html()
-//! [`metadata`]: FlatPageMeta
-#![warn(clippy::all, missing_docs, nonstandard_style, future_incompatible)]
-#![forbid(unsafe_code)]
-#![cfg_attr(docsrs, feature(doc_cfg))]
-use frontmatter::Frontmatter;
-use serde::de::DeserializeOwned;
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![doc = include_str!("../README.md")]
 use std::{
     fs,
     path::{Path, PathBuf},
 };
+
+use frontmatter::Frontmatter;
+use serde::de::DeserializeOwned;
 
 mod error;
 mod frontmatter;
@@ -153,7 +80,8 @@ impl<E: DeserializeOwned> FlatPage<E> {
     }
 }
 
-/// Considers the first line to be the page title, removes markdown header prefix `#`
+/// Considers the first line to be the page title, removes markdown header
+/// prefix `#`
 fn title_from_markdown(body: &str) -> &str {
     body.lines()
         .next()
@@ -177,7 +105,7 @@ fn url_to_filename(url: &str) -> Option<String> {
 }
 
 fn markdown(text: &str) -> String {
-    use pulldown_cmark::{html, Options, Parser};
+    use pulldown_cmark::{Options, Parser, html};
 
     let mut options = Options::empty();
     options.insert(Options::ENABLE_FOOTNOTES);

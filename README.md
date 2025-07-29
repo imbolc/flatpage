@@ -2,8 +2,6 @@
 [![Crates.io](https://img.shields.io/crates/v/flatpage.svg)](https://crates.io/crates/flatpage)
 [![Docs.rs](https://docs.rs/flatpage/badge.svg)](https://docs.rs/flatpage)
 
-<!-- cargo-sync-readme start -->
-
 A simple file system based markdown flat page.
 
 ## Folder structure
@@ -13,21 +11,21 @@ Urls map to files by simply substituting `/` to `^` and adding `.md` extension.
 I believe it should eliminate all kinds of security issues.
 
 | url            | file name         |
-|----------------|-------------------|
+| -------------- | ----------------- |
 | `/`            | `^.md`            |
 | `/foo/bar-baz` | `^foo^bar-baz.md` |
 
 ## Page format
 
-File could provide title and description in a yaml-based frontmatter, if there's no frontmatter
-the first line would be considered the title (and cleaned from possible header marker `#`).
+File could provide title and description in a yaml-based frontmatter, if there's
+no frontmatter the first line would be considered the title (and cleaned from
+possible header marker `#`).
 
-| File content                                         | [`title`] | [`description`] | [`body`] | [`html()`]           |
-|------------------------------------------------------|---------------------|---------------------------|--------------------|--------------------------------|
-| `# Foo`<br>`Bar`                                     | `"Foo"`             | `None`                    | `"# Foo\nBar"`     | `"<h1>Foo</h1>\n<p>Bar</p>\n"` |
-| `---`<br>`description: Bar`<br>`---`<br>`# Foo`      | `"Foo"`             | `Some("Bar")`             | `"# Foo"`          | `"<h1>Foo</h1>\n"`             |
-| `---`<br>`title: Foo`<br>`description: Bar`<br>`---` | `"Foo"`             | `Some("Bar")`             | `""`               | `""`                           |
-
+| File content                                         | [`title`] | [`description`] | [`body`]       | [`html()`]                     |
+| ---------------------------------------------------- | --------- | --------------- | -------------- | ------------------------------ |
+| `# Foo`<br>`Bar`                                     | `"Foo"`   | `None`          | `"# Foo\nBar"` | `"<h1>Foo</h1>\n<p>Bar</p>\n"` |
+| `---`<br>`description: Bar`<br>`---`<br>`# Foo`      | `"Foo"`   | `Some("Bar")`   | `"# Foo"`      | `"<h1>Foo</h1>\n"`             |
+| `---`<br>`title: Foo`<br>`description: Bar`<br>`---` | `"Foo"`   | `Some("Bar")`   | `""`           | `""`                           |
 
 ## Reading a page
 
@@ -58,8 +56,9 @@ let _page = flatpage::FlatPage::<Extra>::by_url("./", "/").unwrap();
 
 ## Cached metadata
 
-It's a common for a page to have a list of related pages. To avoid reading all the files each
-time, you can use [`FlatPageStore`] to cache pages [`metadata`] (titles and descriptions).
+It's a common for a page to have a list of related pages. To avoid reading all
+the files each time, you can use [`FlatPageStore`] to cache pages [`metadata`]
+(titles and descriptions).
 
 ```rust
 let root_folder = "./";
@@ -78,35 +77,13 @@ if let Some(meta) = store.meta_by_url("/") {
 [`html()`]: FlatPage::html()
 [`metadata`]: FlatPageMeta
 
-<!-- cargo-sync-readme end -->
-
 ## Contributing
 
-We appreciate all kinds of contributions, thank you!
-
-
-### Note on README
-
-Most of the readme is automatically copied from the crate documentation by [cargo-sync-readme][].
-This way the readme is always in sync with the docs and examples are tested.
-
-So if you find a part of the readme you'd like to change between `<!-- cargo-sync-readme start -->`
-and `<!-- cargo-sync-readme end -->` markers, don't edit `README.md` directly, but rather change
-the documentation on top of `src/lib.rs` and then synchronize the readme with:
-```bash
-cargo sync-readme
-```
-(make sure the cargo command is installed):
-```bash
-cargo install cargo-sync-readme
-```
-
-If you have [rusty-hook] installed the changes will apply automatically on commit.
-
+Please run [.pre-commit.sh] before sending a PR, it will check everything.
 
 ## License
 
-This project is licensed under the [MIT license](LICENSE).
+This project is licensed under the [MIT license][license].
 
-[cargo-sync-readme]: https://github.com/phaazon/cargo-sync-readme
-[rusty-hook]: https://github.com/swellaby/rusty-hook
+[.pre-commit.sh]: https://github.com/imbolc/flatpage/blob/main/.pre-commit.sh
+[license]: https://github.com/imbolc/flatpage/blob/main/LICENSE

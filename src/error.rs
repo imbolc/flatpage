@@ -1,13 +1,16 @@
 use std::{io, path::PathBuf};
 
 /// The crates error type
-#[derive(Debug, displaydoc::Display, thiserror::Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
-    /// broken frontmatter in `{1}`
+    /// Broken frontmatter
+    #[error("broken frontmatter in '{1}'")]
     ParseFrontmatter(#[source] serde_yaml::Error, String),
-    /// readdir `{1}`
+    /// Can't read folder
+    #[error("readdir '{1}'")]
     ReadDir(#[source] io::Error, PathBuf),
-    /// readdir entry
+    /// Can't read folder entry
+    #[error("readdir entry")]
     DirEntry(#[source] io::Error),
 }
 
