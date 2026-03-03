@@ -116,7 +116,7 @@ fn url_to_filename(url: &str) -> Option<String> {
 }
 
 fn markdown(text: &str) -> String {
-    use pulldown_cmark::{html, Options, Parser};
+    use pulldown_cmark::{Options, Parser, html};
 
     let mut options = Options::empty();
     options.insert(Options::ENABLE_FOOTNOTES);
@@ -215,7 +215,7 @@ mod tests {
 
 mod frontmatter {
 
-    use serde::{de::DeserializeOwned, Deserialize};
+    use serde::{Deserialize, de::DeserializeOwned};
 
     const EMPTY_YAML: &str = "{}";
 

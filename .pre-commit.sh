@@ -20,7 +20,7 @@ set -x
 
 # Install tools
 cargo clippy --version >/dev/null 2>&1 || rustup component add clippy
-cargo machete --version >/dev/null 2>&1 || cargo install --locked cargo-machete
+cargo shear --version >/dev/null 2>&1 || cargo install --locked cargo-shear
 cargo sort --version >/dev/null 2>&1 || cargo install --locked cargo-sort
 typos --version >/dev/null 2>&1 || cargo install --locked typos-cli
 
@@ -29,7 +29,7 @@ cargo +nightly fmt --version >/dev/null 2>&1 || rustup component add rustfmt --t
 
 # Checks
 typos .
-cargo machete
+cargo shear
 cargo +nightly fmt -- --check
 cargo sort -c
 cargo rustdoc --all-features -- -D warnings
