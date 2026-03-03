@@ -17,15 +17,24 @@ I believe it should eliminate all kinds of security issues.
 
 ## Page format
 
-File could provide title and description in a yaml-based frontmatter, if there's
-no frontmatter the first line would be considered the title (and cleaned from
-possible header marker `#`).
+File could provide title and description in frontmatter. `flatpage` proxies
+`markdown-frontmatter` features, so you can parse YAML (`---`), TOML (`+++`)
+and JSON (`{ ... }`) depending on enabled features. If there's no frontmatter
+the first line would be considered the title (and cleaned from possible header
+marker `#`).
 
 | File content                                         | [`title`] | [`description`] | [`body`]       | [`html()`]                     |
 | ---------------------------------------------------- | --------- | --------------- | -------------- | ------------------------------ |
 | `# Foo`<br>`Bar`                                     | `"Foo"`   | `None`          | `"# Foo\nBar"` | `"<h1>Foo</h1>\n<p>Bar</p>\n"` |
 | `---`<br>`description: Bar`<br>`---`<br>`# Foo`      | `"Foo"`   | `Some("Bar")`   | `"# Foo"`      | `"<h1>Foo</h1>\n"`             |
 | `---`<br>`title: Foo`<br>`description: Bar`<br>`---` | `"Foo"`   | `Some("Bar")`   | `""`           | `""`                           |
+
+## Features
+
+- `yaml`: enable YAML frontmatter support
+- `toml`: enable TOML frontmatter support
+- `json`: enable JSON frontmatter support
+- `full`: enable all formats (`json`, `toml`, `yaml`) - enabled by default
 
 ## Reading a page
 

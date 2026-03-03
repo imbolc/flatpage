@@ -4,16 +4,23 @@ edition = "2024"
 license = "MIT"
 name = "flatpage"
 repository = "https://github.com/imbolc/flatpage"
-version = "0.2.1"
+version = "0.3.0"
 
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[features]
+default = ["full"]
+full = ["json", "toml", "yaml"]
+json = ["markdown-frontmatter/json"]
+toml = ["markdown-frontmatter/toml"]
+yaml = ["markdown-frontmatter/yaml"]
+
 [dependencies]
+markdown-frontmatter = { version = "0.5.1", default-features = false }
 pulldown-cmark = "0.13"
 serde = { version = "1", features = ["derive"] }
-serde_yml = "0.0.12"
 thiserror = "2"
 
 [lints.rust]
