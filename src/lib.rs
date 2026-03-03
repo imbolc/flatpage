@@ -1,4 +1,4 @@
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 use std::{
     fs, io,
@@ -116,7 +116,7 @@ fn url_to_filename(url: &str) -> Option<String> {
 }
 
 fn markdown(text: &str) -> String {
-    use pulldown_cmark::{Options, Parser, html};
+    use pulldown_cmark::{html, Options, Parser};
 
     let mut options = Options::empty();
     options.insert(Options::ENABLE_FOOTNOTES);
@@ -215,7 +215,7 @@ mod tests {
 
 mod frontmatter {
 
-    use serde::{Deserialize, de::DeserializeOwned};
+    use serde::{de::DeserializeOwned, Deserialize};
 
     const EMPTY_YAML: &str = "{}";
 
