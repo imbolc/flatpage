@@ -1,25 +1,58 @@
-## Project rules
+Read ./README.md to understand the project goal.
 
-- Read `./README.md` to understand the project goal
-- Never read paths ignored in `./gitignore`
-- Never ask about committing changes
+## Chatting
 
-### Coding tasks
+If I ask you a question, don't automatically assume it's an implementation
+request. Answer the question first and then ask if you should implement the
+suggested solution.
 
-After you're done with a coding task:
+## Coding tasks
 
-- Make `cargo check` pass
-- Make `cargo test` pass
-- Run `cargo +nightly fmt`
-- Make `./.pre-commit.sh` pass
-
-## Common rules
-
-- Perform like a top 0.1% programmer
-- Ask me clarifying questions until you're 99% confident you can complete the
+- Ask me clarifying questions until you're 95% confident you can complete the
   task successfully
-- If at any step you think you're going in circles - stop and let me know
-- In comments and any other texts, strive for clarity and conciseness
-- Don't add comments to the existing code if not explicitly asked
-- Always ask if you want to read / change anything outside of the project folder
+- Before asking any questions, make sure you can't infer the answer from the
+  codebase
+- Ask your questions one by one; don't combine multiple questions into a list
+- Strive to formulate binary questions that can be answered yes or no
+- If a binary question is impossible, provide an enumerated list of options so
+  the answer can be a number
+- If you think a task is too complex to implement in one go, suggest splitting
+  it into subtasks, provide the subtask graph, and recommend which one to start
+  with
+- Write for humans - readability and simplicity are essential
+- Ask before making any optimization that makes the code more complicated or
+  less readable
 
+## Rust code
+
+After you're done with a Rust task, always run the following without asking a
+permission:
+
+Format the code:
+
+```sh
+cargo sort
+cargo +nightly fmt
+```
+
+Make checks pass:
+
+```sh
+./.pre-commit.sh
+```
+
+### Style
+
+- Never just suffixes for `pub` like `pub(crate)
+
+#### Deriving macros from external crates
+
+- Use fully qualified paths, e.g. `serde::Derialize`
+- Put external macros after built-in ones
+- Sort them if possible
+
+## Git
+
+- Don't look into files / folders included in `.gitignore`
+- Never ask to stage or commit anything, but after finishing a coding task,
+  suggest a commit message
