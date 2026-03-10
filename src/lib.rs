@@ -42,7 +42,8 @@ pub struct FlatPage<Extra = ()> {
 impl<Extra: DeserializeOwned> FlatPage<Extra> {
     /// Returns a page by its URL.
     ///
-    /// Accepted forms include `/foo` and `/foo/`.
+    /// Trailing slashes are significant: `/foo` looks up `foo.md`, while
+    /// `/foo/` looks up `foo/index.md`.
     ///
     /// Returns `Ok(None)` for invalid URLs and missing pages. Returns `Err` for
     /// I/O failures and frontmatter parsing errors.

@@ -75,14 +75,16 @@ let sub_page_metas = store
 
 The only characters allowed in URL segments are ASCII letters, numbers, hyphens,
 underscores, and dots. URLs map to nested Markdown files, and `index.md` is used
-for `/` and folder index pages. Empty path segments plus `.` and `..` are
+for `/` and folder index pages. Trailing slashes are significant, so `/foo` and
+`/foo/` map to different files. Empty path segments plus `.` and `..` are
 rejected.
 
-| Url         | File name          |
-| ----------- | ------------------ |
-| `/`         | `index.md`         |
-| `/foo/bar`  | `foo/bar.md`       |
-| `/foo/bar/` | `foo/bar/index.md` |
+| Url        | File name      |
+| ---------- | -------------- |
+| `/`        | `index.md`     |
+| `/foo`     | `foo.md`       |
+| `/foo/`    | `foo/index.md` |
+| `/foo/bar` | `foo/bar.md`   |
 
 ## Page format
 
