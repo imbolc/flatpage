@@ -2,13 +2,14 @@
 [![Crates.io](https://img.shields.io/crates/v/flatpage.svg)](https://crates.io/crates/flatpage)
 [![Docs.rs](https://docs.rs/flatpage/badge.svg)](https://docs.rs/flatpage)
 
-A simple file system based markdown page loader.
+A simple filesystem-based Markdown page loader.
 
 ## Folder structure
 
-Only characters allowed in url segments are ASCII letters, numbers, hyphen,
-underscore and dot. Urls map to nested markdown files, and `index.md` is used
-for `/` and folder index pages. Empty path segments plus `.` and `..` are
+The only characters allowed in URL segments are ASCII letters, numbers,
+hyphens, underscores, and dots. URLs map to nested Markdown files, and
+`index.md` is used for `/` and folder index pages. Empty path segments plus
+`.` and `..` are
 rejected.
 
 | url             | file name              |
@@ -19,10 +20,11 @@ rejected.
 
 ## Page format
 
-File could provide title and description in frontmatter. `flatpage` proxies
-`markdown-frontmatter` features, so you can parse YAML (`---`), TOML (`+++`) and
-JSON (`{ ... }`) depending on enabled features. If there's no frontmatter the
-first line would be considered the title (and cleaned from possible header
+A file can provide a title and description in frontmatter. `flatpage` proxies
+`markdown-frontmatter` features, so you can parse YAML (`---`), TOML (`+++`),
+and JSON (`{ ... }`) depending on the enabled features. If there's no
+frontmatter, the first line is considered the title (and cleaned from a
+possible header
 marker `#`).
 
 | File content                                         | [`title`] | [`description`] | [`body`]       | [`html()`]                     |
@@ -54,7 +56,7 @@ if let Some(home) = flatpage::FlatPage::<()>::by_url(root_folder, "/").unwrap() 
 
 ## Extra frontmatter fields
 
-You can define extra statically typed frontmatter fields
+You can define extra statically typed frontmatter fields.
 
 ```rust,no_run
 #[derive(Debug, serde::Deserialize)]
@@ -67,8 +69,8 @@ let _page = flatpage::FlatPage::<Extra>::by_url("./pages", "/").unwrap();
 
 ## Cached metadata
 
-It's a common for a page to have a list of related pages. To avoid reading all
-the files each time, you can use [`FlatPageStore`] to cache pages [`metadata`]
+It's common for a page to have a list of related pages. To avoid reading all
+the files each time, you can use [`FlatPageStore`] to cache page [`metadata`]
 (titles and descriptions).
 
 ```rust,no_run

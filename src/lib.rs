@@ -40,7 +40,7 @@ pub struct FlatPage<Extra = ()> {
 }
 
 impl<Extra: DeserializeOwned> FlatPage<Extra> {
-    /// Returns a page by its url
+    /// Returns a page by its URL.
     pub fn by_url(root: impl Into<PathBuf>, url: &str) -> Result<Option<Self>> {
         let relative_path = match url_to_path(url) {
             Some(path) => path,
@@ -107,7 +107,7 @@ fn title_from_markdown(body: &str) -> &str {
         .trim()
 }
 
-/// Tries to normalize the url
+/// Tries to normalize the URL.
 fn normalize_url(url: &str) -> Option<String> {
     if url.is_empty() {
         return None;
@@ -154,7 +154,7 @@ fn is_valid_url_segment(segment: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || ALLOWED_IN_URL_SEGMENT.contains(c))
 }
 
-/// Tries to convert the url into a relative markdown path
+/// Tries to convert the URL into a relative Markdown path.
 fn url_to_path(url: &str) -> Option<PathBuf> {
     let url = normalize_url(url)?;
     if url == "/" {

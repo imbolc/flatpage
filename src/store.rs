@@ -35,13 +35,13 @@ impl FlatPageStore {
         Ok(Self { root, pages })
     }
 
-    /// Returns a page metadata by its url
+    /// Returns page metadata by URL.
     pub fn meta_by_url(&self, url: &str) -> Option<&FlatPageMeta> {
         let url = normalize_url(url)?;
         self.pages.get(&url)
     }
 
-    /// Returns a page by its url
+    /// Returns a page by URL.
     pub fn page_by_url<E: DeserializeOwned>(&self, url: &str) -> Result<Option<FlatPage<E>>> {
         let url = match normalize_url(url) {
             Some(url) => url,

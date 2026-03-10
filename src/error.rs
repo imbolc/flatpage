@@ -12,7 +12,7 @@ pub enum Error {
         /// The path to the file
         path: String,
     },
-    /// Can't scan folder
+    /// Cannot scan a folder.
     #[error("readdir: {path}")]
     ReadDir {
         /// The underlying I/O error
@@ -21,7 +21,7 @@ pub enum Error {
         /// The path to the folder being scanned
         path: PathBuf,
     },
-    /// Can't read file
+    /// Cannot read a file.
     #[error("read file: {path}")]
     ReadFile {
         /// The underlying I/O error
