@@ -11,24 +11,24 @@ underscore and dot. Urls map to nested markdown files, and `index.md` is used
 for `/` and folder index pages. Empty path segments plus `.` and `..` are
 rejected.
 
-| url             | file name               |
-| --------------- | ----------------------- |
-| `/`             | `index.md`              |
-| `/foo/bar-baz`  | `foo/bar-baz.md`        |
-| `/foo/bar-baz/` | `foo/bar-baz/index.md`  |
+| url             | file name              |
+| --------------- | ---------------------- |
+| `/`             | `index.md`             |
+| `/foo/bar-baz`  | `foo/bar-baz.md`       |
+| `/foo/bar-baz/` | `foo/bar-baz/index.md` |
 
 ## Page format
 
 File could provide title and description in frontmatter. `flatpage` proxies
-`markdown-frontmatter` features, so you can parse YAML (`---`), TOML (`+++`)
-and JSON (`{ ... }`) depending on enabled features. If there's no frontmatter
-the first line would be considered the title (and cleaned from possible header
+`markdown-frontmatter` features, so you can parse YAML (`---`), TOML (`+++`) and
+JSON (`{ ... }`) depending on enabled features. If there's no frontmatter the
+first line would be considered the title (and cleaned from possible header
 marker `#`).
 
 | File content                                         | [`title`] | [`description`] | [`body`]       | [`html()`]                     |
 | ---------------------------------------------------- | --------- | --------------- | -------------- | ------------------------------ |
 | `# Foo`<br>`Bar`                                     | `"Foo"`   | `None`          | `"# Foo\nBar"` | `"<h1>Foo</h1>\n<p>Bar</p>\n"` |
-| `---`<br>`description: Bar`<br>`---`<br>`# Foo`      | `"Foo"`   | `Some("Bar")`   | `"# Foo"`      | `"<h1>Foo</h1>\n"`             |
+| `+++`<br>`description = "Bar"`<br>`+++`<br>`# Foo`   | `"Foo"`   | `Some("Bar")`   | `"# Foo"`      | `"<h1>Foo</h1>\n"`             |
 | `---`<br>`title: Foo`<br>`description: Bar`<br>`---` | `"Foo"`   | `Some("Bar")`   | `""`           | `""`                           |
 
 ## Features
