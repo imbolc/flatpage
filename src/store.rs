@@ -6,7 +6,10 @@ use std::{
 
 use serde::de::DeserializeOwned;
 
-use crate::{Error, FlatPage, Result, normalize_url, path_to_url, url_to_path};
+use crate::{
+    Error, FlatPage, Frontmatter, Result, frontmatter_and_body, normalize_url, path_to_url,
+    resolve_title, url_to_path,
+};
 
 /// A store for [`FlatPageMeta`]
 #[derive(Debug)]
@@ -129,11 +132,39 @@ fn read_dir_recursive(
             Some(url) => url,
             None => continue,
         };
-        let page = match FlatPage::by_path(&path)? {
-            Some(page) => page,
+        let page_meta = match read_page_meta(&path)? {
+            Some(page_meta) => page_meta,
             None => continue,
         };
-        pages.insert(url, page.into());
+        pages.insert(url, page_meta);
     }
     Ok(())
+}
+
+fn read_page_meta(path: &Path) -> Result<Option<FlatPageMeta>> {
+    let content = match fs::read_to_string(path) {
+        Ok(content) => content,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(Error::ReadFile {
+                source: error,
+                path: path.to_path_buf(),
+            });
+        }
+    };
+    let (
+        Frontmatter {
+            title,
+            description,
+            extra: (),
+        },
+        body,
+    ) = frontmatter_and_body::<()>(&content).map_err(|error| Error::ParseFrontmatter {
+        source: error,
+        path: path.to_path_buf(),
+    })?;
+    Ok(Some(FlatPageMeta {
+        title: resolve_title(title, body),
+        description,
+    }))
 }

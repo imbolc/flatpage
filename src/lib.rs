@@ -93,8 +93,8 @@ impl<Extra: DeserializeOwned> FlatPage<Extra> {
                 extra,
             },
             body,
-        ) = markdown_frontmatter::parse::<Frontmatter<Extra>>(content)?;
-        let title = title.unwrap_or_else(|| title_from_markdown(body).to_string());
+        ) = frontmatter_and_body(content)?;
+        let title = resolve_title(title, body);
         Ok(Self {
             title,
             description,
@@ -104,8 +104,18 @@ impl<Extra: DeserializeOwned> FlatPage<Extra> {
     }
 }
 
+fn frontmatter_and_body<Extra: DeserializeOwned>(
+    content: &str,
+) -> std::result::Result<(Frontmatter<Extra>, &str), markdown_frontmatter::Error> {
+    markdown_frontmatter::parse::<Frontmatter<Extra>>(content)
+}
+
+fn resolve_title(title: Option<String>, body: &str) -> String {
+    title.unwrap_or_else(|| title_from_markdown(body).to_string())
+}
+
 /// Considers the first line to be the page title, removes markdown header
-/// prefix `#`
+/// prefix `#` and optional trailing ATX closing markers
 fn title_from_markdown(body: &str) -> &str {
     let line = body
         .lines()
