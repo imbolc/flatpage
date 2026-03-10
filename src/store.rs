@@ -76,7 +76,10 @@ fn read_dir_recursive(
         source: e,
         path: dir.to_path_buf(),
     })? {
-        let entry = entry.map_err(|e| Error::DirEntry { source: e })?;
+        let entry = entry.map_err(|e| Error::ReadDir {
+            source: e,
+            path: dir.to_path_buf(),
+        })?;
         let path = entry.path();
         if path.is_dir() {
             read_dir_recursive(root, &path, pages)?;

@@ -12,21 +12,14 @@ pub enum Error {
         /// The path to the file
         path: String,
     },
-    /// Can't read folder
+    /// Can't scan folder
     #[error("readdir: {path}")]
     ReadDir {
         /// The underlying I/O error
         #[source]
         source: io::Error,
-        /// The path to the folder
+        /// The path to the folder being scanned
         path: PathBuf,
-    },
-    /// Can't read folder entry
-    #[error("readdir entry")]
-    DirEntry {
-        /// The underlying I/O error
-        #[source]
-        source: io::Error,
     },
     /// Can't read file
     #[error("read file: {path}")]
