@@ -21,6 +21,15 @@ pub enum Error {
         /// The path to the directory being read
         path: PathBuf,
     },
+    /// Failed to read path metadata.
+    #[error("failed to read metadata: {path}")]
+    ReadMetadata {
+        /// The underlying I/O error
+        #[source]
+        source: io::Error,
+        /// The path whose metadata could not be read
+        path: PathBuf,
+    },
     /// Failed to read a file.
     #[error("failed to read file: {path}")]
     ReadFile {

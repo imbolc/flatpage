@@ -461,6 +461,25 @@ mod tests {
         assert_eq!(store.meta_by_url("/install").unwrap().title, "Install");
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn flatpage_store_skips_broken_symlinked_files() {
+        use std::os::unix::fs::symlink;
+
+        let root = TestDir::new();
+        write_page(root.path(), "index.md", "# Home");
+
+        symlink(
+            root.path().join("missing.md"),
+            root.path().join("broken.md"),
+        )
+        .unwrap();
+
+        let store = FlatPageStore::read_dir(root.path()).unwrap();
+        assert_eq!(store.meta_by_url("/").unwrap().title, "Home");
+        assert!(store.meta_by_url("/broken").is_none());
+    }
+
     struct TestDir {
         path: PathBuf,
     }

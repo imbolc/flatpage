@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    fs,
+    fs, io,
     path::{Path, PathBuf},
 };
 
@@ -98,14 +98,20 @@ fn read_dir_recursive(
             path: dir.to_path_buf(),
         })?;
         let is_markdown_file = if file_type.is_symlink() {
-            let metadata = fs::metadata(&path).map_err(|e| Error::ReadDir {
-                source: e,
-                path: path.clone(),
-            })?;
-            if metadata.is_dir() {
+            if path.extension() != md_ext {
                 continue;
             }
-            metadata.is_file() && path.extension() == md_ext
+            let metadata = match fs::metadata(&path) {
+                Ok(metadata) => metadata,
+                Err(error) if error.kind() == io::ErrorKind::NotFound => continue,
+                Err(error) => {
+                    return Err(Error::ReadMetadata {
+                        source: error,
+                        path: path.clone(),
+                    });
+                }
+            };
+            metadata.is_file()
         } else if file_type.is_dir() {
             read_dir_recursive(root, &path, pages)?;
             continue;
