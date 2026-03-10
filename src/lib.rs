@@ -31,7 +31,7 @@ struct Frontmatter<Extra = ()> {
 pub struct FlatPage<Extra = ()> {
     /// Page title
     pub title: String,
-    /// Description - for html meta description, `og:description`, etc
+    /// Description - for HTML meta description, `og:description`, etc
     pub description: Option<String>,
     /// Raw markdown version of the body
     pub body: String,
