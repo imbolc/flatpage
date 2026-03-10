@@ -3,8 +3,8 @@ use std::{io, path::PathBuf};
 /// The crate's error type
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    /// Broken frontmatter
-    #[error("broken frontmatter in: {path}")]
+    /// Failed to parse frontmatter.
+    #[error("failed to parse frontmatter: {path}")]
     ParseFrontmatter {
         /// The underlying frontmatter error
         #[source]
@@ -12,17 +12,17 @@ pub enum Error {
         /// The path to the file
         path: String,
     },
-    /// Cannot scan a folder.
-    #[error("readdir: {path}")]
+    /// Failed to read a directory.
+    #[error("failed to read directory: {path}")]
     ReadDir {
         /// The underlying I/O error
         #[source]
         source: io::Error,
-        /// The path to the folder being scanned
+        /// The path to the directory being read
         path: PathBuf,
     },
-    /// Cannot read a file.
-    #[error("read file: {path}")]
+    /// Failed to read a file.
+    #[error("failed to read file: {path}")]
     ReadFile {
         /// The underlying I/O error
         #[source]
