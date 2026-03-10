@@ -55,7 +55,20 @@ if let Some(meta) = store.meta_by_url("/") {
 }
 
 // Reading pages
-let _page = store.page_by_url::<()>("/");
+if let Some(page) = store.page_by_url::<()>("/").unwrap() {
+    // The page itself read from the file system
+    println!("{:?}", page);
+} else {
+    // No filesystem calls were made to check that the page doesn't exist
+    println!("No home page");
+}
+
+// Searching for sub-pages without filesystem calls
+let prefix = "/foo/";
+let sub_page_metas = store
+    .pages
+    .iter()
+    .filter(|(url, _meta)| url.starts_with(prefix));
 ```
 
 ## Folder structure
