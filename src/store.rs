@@ -72,8 +72,8 @@ impl FlatPageStore {
     }
 }
 
-impl From<FlatPage> for FlatPageMeta {
-    fn from(p: FlatPage) -> Self {
+impl<Extra> From<FlatPage<Extra>> for FlatPageMeta {
+    fn from(p: FlatPage<Extra>) -> Self {
         Self {
             title: p.title,
             description: p.description,
