@@ -2,18 +2,20 @@
 [![Crates.io](https://img.shields.io/crates/v/flatpage.svg)](https://crates.io/crates/flatpage)
 [![Docs.rs](https://docs.rs/flatpage/badge.svg)](https://docs.rs/flatpage)
 
-A simple file system based markdown flat page.
+A simple file system based markdown page loader.
 
 ## Folder structure
 
-Only characters allowed in urls are ASCII, numbers and hyphen with underscore.
-Urls map to files by simply substituting `/` to `^` and adding `.md` extension.
-I believe it should eliminate all kinds of security issues.
+Only characters allowed in url segments are ASCII letters, numbers, hyphen,
+underscore and dot. Urls map to nested markdown files, and `index.md` is used
+for `/` and folder index pages. Empty path segments plus `.` and `..` are
+rejected.
 
-| url            | file name         |
-| -------------- | ----------------- |
-| `/`            | `^.md`            |
-| `/foo/bar-baz` | `^foo^bar-baz.md` |
+| url             | file name               |
+| --------------- | ----------------------- |
+| `/`             | `index.md`              |
+| `/foo/bar-baz`  | `foo/bar-baz.md`        |
+| `/foo/bar-baz/` | `foo/bar-baz/index.md`  |
 
 ## Page format
 
@@ -38,8 +40,8 @@ marker `#`).
 
 ## Reading a page
 
-```rust
-let root_folder = "./";
+```rust,no_run
+let root_folder = "./pages";
 if let Some(home) = flatpage::FlatPage::<()>::by_url(root_folder, "/").unwrap() {
     println!("title: {}", home.title);
     println!("description: {:?}", home.description);
@@ -54,13 +56,13 @@ if let Some(home) = flatpage::FlatPage::<()>::by_url(root_folder, "/").unwrap() 
 
 You can define extra statically typed frontmatter fields
 
-```rust
+```rust,no_run
 #[derive(Debug, serde::Deserialize)]
 struct Extra {
     slug: String,
 }
 
-let _page = flatpage::FlatPage::<Extra>::by_url("./", "/").unwrap();
+let _page = flatpage::FlatPage::<Extra>::by_url("./pages", "/").unwrap();
 ```
 
 ## Cached metadata
@@ -69,8 +71,8 @@ It's a common for a page to have a list of related pages. To avoid reading all
 the files each time, you can use [`FlatPageStore`] to cache pages [`metadata`]
 (titles and descriptions).
 
-```rust
-let root_folder = "./";
+```rust,no_run
+let root_folder = "./pages";
 let store = flatpage::FlatPageStore::read_dir(root_folder).unwrap();
 if let Some(meta) = store.meta_by_url("/") {
     println!("title: {}", meta.title);
