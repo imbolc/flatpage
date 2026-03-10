@@ -2,6 +2,7 @@ use std::ops::Range;
 
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd, html, utils::TextMergeWithOffset};
 
+/// Resolves the page title from frontmatter or falls back to Markdown content.
 pub(crate) fn resolve_title(title: Option<String>, body: &str) -> String {
     title.unwrap_or_else(|| title_from_markdown(body).to_string())
 }
@@ -19,6 +20,7 @@ fn title_from_markdown(body: &str) -> &str {
     atx_heading_title(line).unwrap_or_else(|| line.trim())
 }
 
+/// Returns the content range of a valid ATX heading line, if present.
 fn atx_heading_title(line: &str) -> Option<&str> {
     let mut events = TextMergeWithOffset::new(Parser::new(line).into_offset_iter());
     let Some((Event::Start(Tag::Heading { .. }), _)) = events.next() else {
@@ -46,6 +48,7 @@ fn atx_heading_title(line: &str) -> Option<&str> {
     None
 }
 
+/// Renders Markdown to HTML using the crate's enabled extensions.
 pub(crate) fn markdown(text: &str) -> String {
     let mut options = Options::empty();
     options.insert(Options::ENABLE_FOOTNOTES);

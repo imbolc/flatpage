@@ -72,6 +72,7 @@ impl FlatPageStore {
 }
 
 impl<Extra> From<FlatPage<Extra>> for FlatPageMeta {
+    /// Converts a full page into the cached metadata representation.
     fn from(p: FlatPage<Extra>) -> Self {
         Self {
             title: p.title,
@@ -80,6 +81,8 @@ impl<Extra> From<FlatPage<Extra>> for FlatPageMeta {
     }
 }
 
+/// Recursively walks the page tree and records metadata for valid Markdown
+/// files.
 fn read_dir_recursive(
     root: &Path,
     dir: &Path,
@@ -140,6 +143,7 @@ fn read_dir_recursive(
     Ok(())
 }
 
+/// Reads a page file and extracts the metadata stored in the index.
 fn read_page_meta(path: &Path) -> Result<Option<FlatPageMeta>> {
     FlatPage::<()>::by_path(path).map(|page| page.map(Into::into))
 }

@@ -101,12 +101,14 @@ impl<Extra: DeserializeOwned> FlatPage<Extra> {
     }
 }
 
+/// Parses frontmatter and returns the remaining Markdown body unchanged.
 fn frontmatter_and_body<Extra: DeserializeOwned>(
     content: &str,
 ) -> std::result::Result<(Frontmatter<Extra>, &str), markdown_frontmatter::Error> {
     markdown_frontmatter::parse::<Frontmatter<Extra>>(content)
 }
 
+/// Parses a page body into resolved title, description, body, and extra fields.
 fn parse_page_content<Extra: DeserializeOwned>(
     content: &str,
 ) -> std::result::Result<ParsedPage<'_, Extra>, markdown_frontmatter::Error> {

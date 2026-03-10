@@ -44,6 +44,7 @@ pub(crate) fn normalize_url(url: &str) -> Option<String> {
     Some(normalized)
 }
 
+/// Returns whether a single URL path segment is accepted by the crate.
 fn is_valid_url_segment(segment: &str) -> bool {
     !segment.is_empty()
         && segment != "."
@@ -59,6 +60,7 @@ pub(crate) fn url_to_path(url: &str) -> Option<PathBuf> {
     Some(normalized_url_to_path(&url))
 }
 
+/// Converts a URL into an absolute Markdown path under the given root.
 pub(crate) fn page_path(root: &Path, url: &str) -> Option<PathBuf> {
     let relative_path = url_to_path(url)?;
     let mut path = root.to_path_buf();
@@ -66,12 +68,14 @@ pub(crate) fn page_path(root: &Path, url: &str) -> Option<PathBuf> {
     Some(path)
 }
 
+/// Converts an already normalized URL into an absolute Markdown path.
 pub(crate) fn page_path_from_normalized_url(root: &Path, url: &str) -> PathBuf {
     let mut path = root.to_path_buf();
     path.push(normalized_url_to_path(url));
     path
 }
 
+/// Converts a relative Markdown path into its canonical URL form.
 pub(crate) fn path_to_url(path: &Path) -> Option<String> {
     let mut components = Vec::new();
     for component in path.components() {
@@ -103,6 +107,7 @@ pub(crate) fn path_to_url(path: &Path) -> Option<String> {
     Some(format!("/{}", components.join("/")))
 }
 
+/// Converts an already normalized URL into its relative Markdown file path.
 fn normalized_url_to_path(url: &str) -> PathBuf {
     if url == "/" {
         return PathBuf::from("index.md");
