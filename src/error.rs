@@ -22,7 +22,7 @@ pub enum Error {
         path: PathBuf,
     },
     /// Failed to read path metadata.
-    #[error("failed to read metadata: {path}")]
+    #[error("failed to read filesystem metadata: {path}")]
     ReadMetadata {
         /// The underlying I/O error
         #[source]
