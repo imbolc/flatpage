@@ -8,8 +8,8 @@ pub(crate) fn resolve_title(title: Option<String>, body: &str) -> String {
 
 /// Uses the first non-empty line as the page title.
 ///
-/// Valid ATX headings are normalized to plain text by removing the opening `#`
-/// sequence and any optional closing markers.
+/// Valid ATX headings have their opening `#` sequence and any optional closing
+/// markers removed, while preserving the remaining Markdown content.
 fn title_from_markdown(body: &str) -> &str {
     let line = body
         .lines()

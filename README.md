@@ -91,8 +91,8 @@ rejected.
 A file can provide a title and description in frontmatter. `flatpage` proxies
 `markdown-frontmatter` features, so you can parse YAML (`---`), TOML (`+++`),
 and JSON (`{ ... }`) depending on the enabled features. If there's no
-frontmatter, the first non-empty line is considered the title (and cleaned from
-a possible header marker `#`).
+frontmatter, the first non-empty line is considered the title. For ATX headings,
+`flatpage` strips the heading markers but preserves the remaining Markdown.
 
 | File content                                         | [`title`] | [`description`] | [`body`]       | [`html()`]                     |
 | ---------------------------------------------------- | --------- | --------------- | -------------- | ------------------------------ |
