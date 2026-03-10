@@ -7,7 +7,8 @@ use std::{
 use serde::de::DeserializeOwned;
 
 use crate::{
-    Error, FlatPage, ParsedPage, Result, normalize_url, page_path, parse_page_content, path_to_url,
+    Error, FlatPage, Result,
+    path::{normalize_url, page_path, path_to_url},
 };
 
 /// A store for [`FlatPageMeta`]
@@ -142,21 +143,98 @@ fn read_dir_recursive(
 }
 
 fn read_page_meta(path: &Path) -> Result<Option<FlatPageMeta>> {
-    let content = match fs::read_to_string(path) {
-        Ok(content) => content,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
-        Err(error) => {
-            return Err(Error::ReadFile {
-                source: error,
-                path: path.to_path_buf(),
-            });
-        }
-    };
-    let ParsedPage {
-        title, description, ..
-    } = parse_page_content::<()>(&content).map_err(|error| Error::ParseFrontmatter {
-        source: error,
-        path: path.to_path_buf(),
-    })?;
-    Ok(Some(FlatPageMeta { title, description }))
+    FlatPage::<()>::by_path(path).map(|page| page.map(Into::into))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_helpers::{TestDir, write_page};
+
+    #[test]
+    fn flatpage_store_reads_nested_paths() {
+        let root = TestDir::new();
+        write_page(root.path(), "index.md", "# Home");
+        write_page(root.path(), "guides/index.md", "# Guides");
+        write_page(root.path(), "guides/install.md", "# Install");
+        write_page(root.path(), "guides/v1.2.md", "# Versioned Guide");
+
+        let store = FlatPageStore::read_dir(root.path()).unwrap();
+        assert_eq!(store.meta_by_url("/").unwrap().title, "Home");
+        assert_eq!(store.meta_by_url("/guides/").unwrap().title, "Guides");
+        assert_eq!(
+            store.meta_by_url("/guides/install").unwrap().title,
+            "Install"
+        );
+        assert_eq!(
+            store.meta_by_url("/guides/v1.2").unwrap().title,
+            "Versioned Guide"
+        );
+        assert!(store.meta_by_url("/guides").is_none());
+        assert!(store.meta_by_url("guides/install").is_none());
+
+        let page = store.page_by_url::<()>("/guides/install").unwrap().unwrap();
+        assert_eq!(page.title, "Install");
+
+        let dotted = store.page_by_url::<()>("/guides/v1.2").unwrap().unwrap();
+        assert_eq!(dotted.title, "Versioned Guide");
+        assert!(store.page_by_url::<()>("guides/install").unwrap().is_none());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn flatpage_store_ignores_symlinked_directories() {
+        use std::os::unix::fs::symlink;
+
+        let root = TestDir::new();
+        let external = TestDir::new();
+        write_page(root.path(), "index.md", "# Home");
+        write_page(external.path(), "secret.md", "# Secret");
+
+        symlink(external.path(), root.path().join("linked")).unwrap();
+
+        let store = FlatPageStore::read_dir(root.path()).unwrap();
+        assert_eq!(store.meta_by_url("/").unwrap().title, "Home");
+        assert!(store.meta_by_url("/linked/secret").is_none());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn flatpage_store_reads_symlinked_files() {
+        use std::os::unix::fs::symlink;
+
+        let root = TestDir::new();
+        let external = TestDir::new();
+        write_page(root.path(), "index.md", "# Home");
+        write_page(external.path(), "install.md", "# Install");
+
+        symlink(
+            external.path().join("install.md"),
+            root.path().join("install.md"),
+        )
+        .unwrap();
+
+        let store = FlatPageStore::read_dir(root.path()).unwrap();
+        assert_eq!(store.meta_by_url("/").unwrap().title, "Home");
+        assert_eq!(store.meta_by_url("/install").unwrap().title, "Install");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn flatpage_store_skips_broken_symlinked_files() {
+        use std::os::unix::fs::symlink;
+
+        let root = TestDir::new();
+        write_page(root.path(), "index.md", "# Home");
+
+        symlink(
+            root.path().join("missing.md"),
+            root.path().join("broken.md"),
+        )
+        .unwrap();
+
+        let store = FlatPageStore::read_dir(root.path()).unwrap();
+        assert_eq!(store.meta_by_url("/").unwrap().title, "Home");
+        assert!(store.meta_by_url("/broken").is_none());
+    }
 }
