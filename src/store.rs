@@ -40,7 +40,7 @@ impl FlatPageStore {
 
     /// Returns page metadata by URL.
     ///
-    /// Accepted forms include `/foo`, `/foo/`, and `foo`.
+    /// Accepted forms include `/foo` and `/foo/`.
     ///
     /// Returns `None` for invalid URLs and missing pages.
     pub fn meta_by_url(&self, url: &str) -> Option<&FlatPageMeta> {
@@ -50,7 +50,7 @@ impl FlatPageStore {
 
     /// Returns a page by URL.
     ///
-    /// Accepted forms include `/foo`, `/foo/`, and `foo`.
+    /// Accepted forms include `/foo` and `/foo/`.
     ///
     /// Returns `Ok(None)` for invalid URLs and missing pages.
     pub fn page_by_url<E: DeserializeOwned>(&self, url: &str) -> Result<Option<FlatPage<E>>> {

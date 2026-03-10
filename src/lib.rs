@@ -42,7 +42,7 @@ pub struct FlatPage<Extra = ()> {
 impl<Extra: DeserializeOwned> FlatPage<Extra> {
     /// Returns a page by its URL.
     ///
-    /// Accepted forms include `/foo`, `/foo/`, and `foo`.
+    /// Accepted forms include `/foo` and `/foo/`.
     ///
     /// Returns `Ok(None)` for invalid URLs and missing pages. Returns `Err` for
     /// I/O failures and frontmatter parsing errors.
@@ -158,6 +158,10 @@ fn normalize_url(url: &str) -> Option<String> {
 
     if url == "/" {
         return Some("/".into());
+    }
+
+    if !url.starts_with('/') {
+        return None;
     }
 
     let trailing_slash = url.ends_with('/');
@@ -276,6 +280,7 @@ mod tests {
     fn test_url_to_path() {
         assert_eq!(url_to_path(""), None);
         assert_eq!(url_to_path("#"), None);
+        assert_eq!(url_to_path("foo"), None);
         assert_eq!(url_to_path("ы"), None);
         assert_eq!(url_to_path("//foo"), None);
         assert_eq!(url_to_path("foo//"), None);
@@ -321,12 +326,13 @@ mod tests {
 
     #[test]
     fn test_normalize_url_rejects_empty_segments() {
+        assert_eq!(normalize_url("foo"), None);
         assert_eq!(normalize_url("//foo"), None);
         assert_eq!(normalize_url("foo//"), None);
         assert_eq!(normalize_url("foo//bar"), None);
         assert_eq!(normalize_url("////"), None);
         assert_eq!(normalize_url("/foo/").as_deref(), Some("/foo/"));
-        assert_eq!(normalize_url("foo").as_deref(), Some("/foo"));
+        assert_eq!(normalize_url("/foo").as_deref(), Some("/foo"));
     }
 
     #[test]
@@ -433,6 +439,12 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(dotted.title, "Versioned Guide");
+
+        assert!(
+            FlatPage::<()>::by_url(root.path(), "guides/install")
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]
@@ -455,12 +467,14 @@ mod tests {
             "Versioned Guide"
         );
         assert!(store.meta_by_url("/guides").is_none());
+        assert!(store.meta_by_url("guides/install").is_none());
 
         let page = store.page_by_url::<()>("/guides/install").unwrap().unwrap();
         assert_eq!(page.title, "Install");
 
         let dotted = store.page_by_url::<()>("/guides/v1.2").unwrap().unwrap();
         assert_eq!(dotted.title, "Versioned Guide");
+        assert!(store.page_by_url::<()>("guides/install").unwrap().is_none());
     }
 
     #[cfg(unix)]
