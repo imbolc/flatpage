@@ -41,6 +41,11 @@ pub struct FlatPage<Extra = ()> {
 
 impl<Extra: DeserializeOwned> FlatPage<Extra> {
     /// Returns a page by its URL.
+    ///
+    /// Accepted forms include `/foo`, `/foo/`, and `foo`.
+    ///
+    /// Returns `Ok(None)` for invalid URLs and missing pages. Returns `Err` for
+    /// I/O failures and frontmatter parsing errors.
     pub fn by_url(root: impl Into<PathBuf>, url: &str) -> Result<Option<Self>> {
         let relative_path = match url_to_path(url) {
             Some(path) => path,
@@ -51,7 +56,9 @@ impl<Extra: DeserializeOwned> FlatPage<Extra> {
         Self::by_path(&path)
     }
 
-    /// Returns a page by its file path
+    /// Returns a page by its file path.
+    ///
+    /// Returns `Ok(None)` when the file does not exist.
     pub fn by_path(path: impl AsRef<Path>) -> Result<Option<Self>> {
         let path = path.as_ref();
         let content = match fs::read_to_string(path) {

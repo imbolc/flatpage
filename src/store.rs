@@ -13,7 +13,7 @@ use crate::{Error, FlatPage, Result, normalize_url, path_to_url, url_to_path};
 pub struct FlatPageStore {
     /// The folder containing markdown pages
     root: PathBuf,
-    /// Maps page urls to metadata
+    /// Maps normalized URLs such as `/guides/install` to metadata.
     pub pages: HashMap<String, FlatPageMeta>,
 }
 
@@ -27,7 +27,7 @@ pub struct FlatPageMeta {
 }
 
 impl FlatPageStore {
-    /// Creates a store from the folder
+    /// Creates a store by scanning the folder recursively.
     pub fn read_dir(root: impl Into<PathBuf>) -> Result<Self> {
         let root = root.into();
         let mut pages = HashMap::new();
@@ -36,12 +36,20 @@ impl FlatPageStore {
     }
 
     /// Returns page metadata by URL.
+    ///
+    /// Accepted forms include `/foo`, `/foo/`, and `foo`.
+    ///
+    /// Returns `None` for invalid URLs and missing pages.
     pub fn meta_by_url(&self, url: &str) -> Option<&FlatPageMeta> {
         let url = normalize_url(url)?;
         self.pages.get(&url)
     }
 
     /// Returns a page by URL.
+    ///
+    /// Accepted forms include `/foo`, `/foo/`, and `foo`.
+    ///
+    /// Returns `Ok(None)` for invalid URLs and missing pages.
     pub fn page_by_url<E: DeserializeOwned>(&self, url: &str) -> Result<Option<FlatPage<E>>> {
         let url = match normalize_url(url) {
             Some(url) => url,

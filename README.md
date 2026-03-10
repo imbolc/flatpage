@@ -12,6 +12,9 @@ hyphens, underscores, and dots. URLs map to nested Markdown files, and
 `.` and `..` are
 rejected.
 
+Accepted forms include `/foo`, `/foo/`, and `foo` (normalized to `/foo`).
+Invalid examples include `//foo`, `/foo//bar`, and `/../secret`.
+
 | url             | file name              |
 | --------------- | ---------------------- |
 | `/`             | `index.md`             |
@@ -41,6 +44,9 @@ marker `#`).
 - `full`: enable all formats (`json`, `toml`, `yaml`) - enabled by default
 
 ## Reading a page
+
+`FlatPage::by_url` returns `Ok(None)` for invalid URLs and missing pages. It
+returns `Err` only for I/O failures and frontmatter parsing errors.
 
 ```rust,no_run
 let root_folder = "./pages";
@@ -72,6 +78,9 @@ let _page = flatpage::FlatPage::<Extra>::by_url("./pages", "/").unwrap();
 It's common for a page to have a list of related pages. To avoid reading all
 the files each time, you can use [`FlatPageStore`] to cache page [`metadata`]
 (titles and descriptions).
+
+`FlatPageStore::read_dir` scans the root folder recursively. Its `pages` map is
+keyed by normalized URLs such as `/`, `/guides/`, and `/guides/install`.
 
 ```rust,no_run
 let root_folder = "./pages";
