@@ -107,11 +107,37 @@ impl<Extra: DeserializeOwned> FlatPage<Extra> {
 /// Considers the first line to be the page title, removes markdown header
 /// prefix `#`
 fn title_from_markdown(body: &str) -> &str {
-    body.lines()
-        .find(|l| !l.trim().is_empty())
-        .unwrap_or_default()
-        .trim_start_matches('#')
-        .trim()
+    let line = body
+        .lines()
+        .find(|line| !line.trim().is_empty())
+        .unwrap_or_default();
+    if !line.starts_with('#') {
+        return line.trim();
+    }
+
+    strip_optional_atx_closing(line.trim_start_matches('#')).trim()
+}
+
+fn strip_optional_atx_closing(line: &str) -> &str {
+    let trimmed_end = line.trim_end();
+    let mut hashes_start = trimmed_end.len();
+    for (index, ch) in trimmed_end.char_indices().rev() {
+        if ch == '#' {
+            hashes_start = index;
+        } else {
+            break;
+        }
+    }
+    if hashes_start == trimmed_end.len() {
+        return line;
+    }
+
+    let prefix = &trimmed_end[..hashes_start];
+    if prefix.chars().last().is_some_and(char::is_whitespace) {
+        prefix.trim_end()
+    } else {
+        line
+    }
 }
 
 /// Tries to normalize the URL.
@@ -297,6 +323,10 @@ mod tests {
     fn test_title_from_markdown() {
         assert_eq!(title_from_markdown("# Foo"), "Foo");
         assert_eq!(title_from_markdown("## Foo"), "Foo");
+        assert_eq!(title_from_markdown("# Foo #"), "Foo");
+        assert_eq!(title_from_markdown("# Foo ##"), "Foo");
+        assert_eq!(title_from_markdown("# Foo#"), "Foo#");
+        assert_eq!(title_from_markdown("# #"), "");
         assert_eq!(title_from_markdown("Foo"), "Foo");
         assert_eq!(title_from_markdown(""), "");
     }
