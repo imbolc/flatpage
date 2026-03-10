@@ -7,8 +7,7 @@ use std::{
 use serde::de::DeserializeOwned;
 
 use crate::{
-    Error, FlatPage, Frontmatter, Result, frontmatter_and_body, normalize_url, path_to_url,
-    resolve_title, url_to_path,
+    Error, FlatPage, ParsedPage, Result, normalize_url, page_path, parse_page_content, path_to_url,
 };
 
 /// A store for [`FlatPageMeta`]
@@ -60,16 +59,15 @@ impl FlatPageStore {
             Some(url) => url,
             None => return Ok(None),
         };
+        // Intentionally check the in-memory index first so missing pages avoid
+        // filesystem access.
         if !self.pages.contains_key(&url) {
             return Ok(None);
         }
 
-        let Some(relative_path) = url_to_path(&url) else {
+        let Some(path) = page_path(&self.root, &url) else {
             return Ok(None);
         };
-
-        let mut path = self.root.clone();
-        path.push(relative_path);
         FlatPage::by_path(path)
     }
 }
@@ -154,19 +152,11 @@ fn read_page_meta(path: &Path) -> Result<Option<FlatPageMeta>> {
             });
         }
     };
-    let (
-        Frontmatter {
-            title,
-            description,
-            extra: (),
-        },
-        body,
-    ) = frontmatter_and_body::<()>(&content).map_err(|error| Error::ParseFrontmatter {
+    let ParsedPage {
+        title, description, ..
+    } = parse_page_content::<()>(&content).map_err(|error| Error::ParseFrontmatter {
         source: error,
         path: path.to_path_buf(),
     })?;
-    Ok(Some(FlatPageMeta {
-        title: resolve_title(title, body),
-        description,
-    }))
+    Ok(Some(FlatPageMeta { title, description }))
 }

@@ -26,6 +26,13 @@ struct Frontmatter<Extra = ()> {
     extra: Extra,
 }
 
+struct ParsedPage<'a, Extra = ()> {
+    title: String,
+    description: Option<String>,
+    body: &'a str,
+    extra: Extra,
+}
+
 /// Flat page
 #[derive(Debug)]
 pub struct FlatPage<Extra = ()> {
@@ -48,12 +55,11 @@ impl<Extra: DeserializeOwned> FlatPage<Extra> {
     /// Returns `Ok(None)` for invalid URLs and missing pages. Returns `Err` for
     /// I/O failures and frontmatter parsing errors.
     pub fn by_url(root: impl Into<PathBuf>, url: &str) -> Result<Option<Self>> {
-        let relative_path = match url_to_path(url) {
+        let root = root.into();
+        let path = match page_path(&root, url) {
             Some(path) => path,
             None => return Ok(None),
         };
-        let mut path: PathBuf = root.into();
-        path.push(relative_path);
         Self::by_path(&path)
     }
 
@@ -87,15 +93,12 @@ impl<Extra: DeserializeOwned> FlatPage<Extra> {
 
     /// Parses a page from text
     fn from_content(content: &str) -> std::result::Result<Self, markdown_frontmatter::Error> {
-        let (
-            Frontmatter {
-                title,
-                description,
-                extra,
-            },
+        let ParsedPage {
+            title,
+            description,
             body,
-        ) = frontmatter_and_body(content)?;
-        let title = resolve_title(title, body);
+            extra,
+        } = parse_page_content(content)?;
         Ok(Self {
             title,
             description,
@@ -109,6 +112,25 @@ fn frontmatter_and_body<Extra: DeserializeOwned>(
     content: &str,
 ) -> std::result::Result<(Frontmatter<Extra>, &str), markdown_frontmatter::Error> {
     markdown_frontmatter::parse::<Frontmatter<Extra>>(content)
+}
+
+fn parse_page_content<Extra: DeserializeOwned>(
+    content: &str,
+) -> std::result::Result<ParsedPage<'_, Extra>, markdown_frontmatter::Error> {
+    let (
+        Frontmatter {
+            title,
+            description,
+            extra,
+        },
+        body,
+    ) = frontmatter_and_body(content)?;
+    Ok(ParsedPage {
+        title: resolve_title(title, body),
+        description,
+        body,
+        extra,
+    })
 }
 
 fn resolve_title(title: Option<String>, body: &str) -> String {
@@ -129,44 +151,34 @@ fn title_from_markdown(body: &str) -> &str {
 }
 
 fn atx_heading_title(line: &str) -> Option<&str> {
-    let indent = line.bytes().take_while(|b| *b == b' ').count();
-    if indent > 3 {
+    use std::ops::Range;
+
+    use pulldown_cmark::{Event, Parser, Tag, TagEnd, utils::TextMergeWithOffset};
+
+    let mut events = TextMergeWithOffset::new(Parser::new(line).into_offset_iter());
+    let Some((Event::Start(Tag::Heading { .. }), _)) = events.next() else {
         return None;
+    };
+
+    let mut content_range: Option<Range<usize>> = None;
+    for (event, range) in events {
+        if matches!(event, Event::End(TagEnd::Heading(_))) {
+            let content = match content_range {
+                Some(range) => &line[range],
+                None => "",
+            };
+            return Some(content);
+        }
+
+        content_range = Some(match content_range {
+            Some(content_range) => {
+                content_range.start.min(range.start)..content_range.end.max(range.end)
+            }
+            None => range,
+        });
     }
 
-    let line = &line[indent..];
-    let heading_level = line.bytes().take_while(|b| *b == b'#').count();
-    if heading_level == 0 || heading_level > 6 {
-        return None;
-    }
-
-    let remainder = &line[heading_level..];
-    if remainder
-        .chars()
-        .next()
-        .is_some_and(|ch| !ch.is_whitespace())
-    {
-        return None;
-    }
-
-    Some(strip_optional_atx_closing(
-        remainder.trim_start_matches(char::is_whitespace),
-    ))
-}
-
-fn strip_optional_atx_closing(line: &str) -> &str {
-    let trimmed_end = line.trim_end_matches(char::is_whitespace);
-    let trailing_hash_count = trimmed_end.bytes().rev().take_while(|b| *b == b'#').count();
-    if trailing_hash_count == 0 {
-        return trimmed_end;
-    }
-
-    let prefix = &trimmed_end[..trimmed_end.len() - trailing_hash_count];
-    if prefix.is_empty() || prefix.chars().last().is_some_and(char::is_whitespace) {
-        prefix.trim_end()
-    } else {
-        trimmed_end
-    }
+    None
 }
 
 /// Tries to normalize the URL.
@@ -238,6 +250,13 @@ fn url_to_path(url: &str) -> Option<PathBuf> {
     } else {
         path.push(format!("{last_segment}.md"));
     }
+    Some(path)
+}
+
+fn page_path(root: &Path, url: &str) -> Option<PathBuf> {
+    let relative_path = url_to_path(url)?;
+    let mut path = root.to_path_buf();
+    path.push(relative_path);
     Some(path)
 }
 
@@ -360,9 +379,12 @@ mod tests {
         assert_eq!(title_from_markdown("# Foo"), "Foo");
         assert_eq!(title_from_markdown("## Foo"), "Foo");
         assert_eq!(title_from_markdown("  # Foo"), "Foo");
+        assert_eq!(title_from_markdown("#\tFoo"), "Foo");
         assert_eq!(title_from_markdown("# Foo #"), "Foo");
         assert_eq!(title_from_markdown("# Foo ##"), "Foo");
         assert_eq!(title_from_markdown("# Foo#"), "Foo#");
+        assert_eq!(title_from_markdown("# *Foo*"), "*Foo*");
+        assert_eq!(title_from_markdown("# [Foo](bar)"), "[Foo](bar)");
         assert_eq!(title_from_markdown("# #"), "");
         assert_eq!(title_from_markdown("#"), "");
         assert_eq!(title_from_markdown("#5 bolt"), "#5 bolt");
