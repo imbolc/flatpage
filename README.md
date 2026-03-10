@@ -38,7 +38,7 @@ if let Some(page) = flatpage::FlatPage::<Extra>::by_url("./pages", "/").unwrap()
 
 ## Cached metadata
 
-You can memorize pages [`metadata`] (titles and descriptions) using
+You can cache page [`metadata`] (titles and descriptions) using
 [`FlatPageStore`]. This lets you check if page exists or search for sub-pages
 without filesystem calls.
 

@@ -97,14 +97,22 @@ fn read_dir_recursive(
             source: e,
             path: dir.to_path_buf(),
         })?;
-        if file_type.is_symlink() {
-            continue;
-        }
-        if file_type.is_dir() {
+        let is_markdown_file = if file_type.is_symlink() {
+            let metadata = fs::metadata(&path).map_err(|e| Error::ReadDir {
+                source: e,
+                path: path.clone(),
+            })?;
+            if metadata.is_dir() {
+                continue;
+            }
+            metadata.is_file() && path.extension() == md_ext
+        } else if file_type.is_dir() {
             read_dir_recursive(root, &path, pages)?;
             continue;
-        }
-        if !file_type.is_file() || path.extension() != md_ext {
+        } else {
+            file_type.is_file() && path.extension() == md_ext
+        };
+        if !is_markdown_file {
             continue;
         }
         let relative_path = match path.strip_prefix(root) {

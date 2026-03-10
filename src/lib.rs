@@ -189,13 +189,15 @@ fn path_to_url(path: &Path) -> Option<String> {
             return None;
         };
         let segment = segment.to_str()?;
-        if !is_valid_url_segment(segment.strip_suffix(".md").unwrap_or(segment)) {
-            return None;
-        }
         components.push(segment);
     }
 
     let file_name = components.pop()?;
+    for segment in &components {
+        if !is_valid_url_segment(segment) {
+            return None;
+        }
+    }
     if file_name == "index.md" {
         if components.is_empty() {
             return Some("/".into());
@@ -204,6 +206,9 @@ fn path_to_url(path: &Path) -> Option<String> {
     }
 
     let stem = file_name.strip_suffix(".md")?;
+    if !is_valid_url_segment(stem) {
+        return None;
+    }
     components.push(stem);
     Some(format!("/{}", components.join("/")))
 }
@@ -258,6 +263,10 @@ mod tests {
     #[test]
     fn test_path_to_url() {
         assert_eq!(path_to_url(Path::new("index.md")).as_deref(), Some("/"));
+        assert_eq!(
+            path_to_url(Path::new(".md/index.md")).as_deref(),
+            Some("/.md/")
+        );
         assert_eq!(
             path_to_url(Path::new("guides/getting-started.md")).as_deref(),
             Some("/guides/getting-started")
@@ -429,6 +438,27 @@ mod tests {
         let store = FlatPageStore::read_dir(root.path()).unwrap();
         assert_eq!(store.meta_by_url("/").unwrap().title, "Home");
         assert!(store.meta_by_url("/linked/secret").is_none());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn flatpage_store_reads_symlinked_files() {
+        use std::os::unix::fs::symlink;
+
+        let root = TestDir::new();
+        let external = TestDir::new();
+        write_page(root.path(), "index.md", "# Home");
+        write_page(external.path(), "install.md", "# Install");
+
+        symlink(
+            external.path().join("install.md"),
+            root.path().join("install.md"),
+        )
+        .unwrap();
+
+        let store = FlatPageStore::read_dir(root.path()).unwrap();
+        assert_eq!(store.meta_by_url("/").unwrap().title, "Home");
+        assert_eq!(store.meta_by_url("/install").unwrap().title, "Install");
     }
 
     struct TestDir {
