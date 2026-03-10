@@ -112,11 +112,23 @@ fn normalize_url(url: &str) -> Option<String> {
     if url.is_empty() {
         return None;
     }
-    let trailing_slash = url.ends_with('/');
-    let url = url.trim_matches('/');
-    if url.is_empty() {
+
+    if url == "/" {
         return Some("/".into());
     }
+
+    let trailing_slash = url.ends_with('/');
+    let url = url.strip_prefix('/').unwrap_or(url);
+    let url = if trailing_slash {
+        url.strip_suffix('/').unwrap_or(url)
+    } else {
+        url
+    };
+
+    if url.is_empty() || url.contains("//") {
+        return None;
+    }
+
     let mut normalized = String::from("/");
     for (index, segment) in url.split('/').enumerate() {
         if !is_valid_url_segment(segment) {
@@ -214,6 +226,8 @@ mod tests {
         assert_eq!(url_to_path(""), None);
         assert_eq!(url_to_path("#"), None);
         assert_eq!(url_to_path("ы"), None);
+        assert_eq!(url_to_path("//foo"), None);
+        assert_eq!(url_to_path("foo//"), None);
         assert_eq!(url_to_path("/../secret"), None);
         assert_eq!(url_to_path("/foo//bar"), None);
         assert_eq!(url_to_path("/").unwrap(), PathBuf::from("index.md"));
@@ -240,6 +254,16 @@ mod tests {
         );
         assert_eq!(path_to_url(Path::new("../secret.md")), None);
         assert_eq!(path_to_url(Path::new("guides/../secret.md")), None);
+    }
+
+    #[test]
+    fn test_normalize_url_rejects_empty_segments() {
+        assert_eq!(normalize_url("//foo"), None);
+        assert_eq!(normalize_url("foo//"), None);
+        assert_eq!(normalize_url("foo//bar"), None);
+        assert_eq!(normalize_url("////"), None);
+        assert_eq!(normalize_url("/foo/").as_deref(), Some("/foo/"));
+        assert_eq!(normalize_url("foo").as_deref(), Some("/foo"));
     }
 
     #[test]
