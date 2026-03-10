@@ -75,7 +75,7 @@ impl<Extra: DeserializeOwned> FlatPage<Extra> {
             .map(Some)
             .map_err(|e| Error::ParseFrontmatter {
                 source: e,
-                path: path.display().to_string(),
+                path: path.to_path_buf(),
             })
     }
 
@@ -168,13 +168,16 @@ fn url_to_path(url: &str) -> Option<PathBuf> {
         return Some(PathBuf::from("index.md"));
     }
     let mut path = PathBuf::new();
-    for segment in url.trim_matches('/').split('/') {
+    let mut segments = url.trim_matches('/').split('/');
+    let last_segment = segments.next_back()?;
+    for segment in segments {
         path.push(segment);
     }
     if url.ends_with('/') {
+        path.push(last_segment);
         path.push("index.md");
     } else {
-        path.set_extension("md");
+        path.push(format!("{last_segment}.md"));
     }
     Some(path)
 }
@@ -246,6 +249,10 @@ mod tests {
             url_to_path("/foo-bar/baz/").unwrap(),
             PathBuf::from("foo-bar/baz/index.md")
         );
+        assert_eq!(
+            url_to_path("/foo.bar").unwrap(),
+            PathBuf::from("foo.bar.md")
+        );
     }
 
     #[test]
@@ -258,6 +265,10 @@ mod tests {
         assert_eq!(
             path_to_url(Path::new("guides/index.md")).as_deref(),
             Some("/guides/")
+        );
+        assert_eq!(
+            path_to_url(Path::new("guides/v1.2.md")).as_deref(),
+            Some("/guides/v1.2")
         );
         assert_eq!(path_to_url(Path::new("../secret.md")), None);
         assert_eq!(path_to_url(Path::new("guides/../secret.md")), None);
@@ -357,6 +368,7 @@ mod tests {
         let root = TestDir::new();
         write_page(root.path(), "guides/rust/index.md", "# Rust Guide");
         write_page(root.path(), "guides/install.md", "# Install");
+        write_page(root.path(), "guides/v1.2.md", "# Versioned Guide");
 
         let index = FlatPage::<()>::by_url(root.path(), "/guides/rust/")
             .unwrap()
@@ -367,6 +379,11 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(page.title, "Install");
+
+        let dotted = FlatPage::<()>::by_url(root.path(), "/guides/v1.2")
+            .unwrap()
+            .unwrap();
+        assert_eq!(dotted.title, "Versioned Guide");
     }
 
     #[test]
@@ -375,6 +392,7 @@ mod tests {
         write_page(root.path(), "index.md", "# Home");
         write_page(root.path(), "guides/index.md", "# Guides");
         write_page(root.path(), "guides/install.md", "# Install");
+        write_page(root.path(), "guides/v1.2.md", "# Versioned Guide");
 
         let store = FlatPageStore::read_dir(root.path()).unwrap();
         assert_eq!(store.meta_by_url("/").unwrap().title, "Home");
@@ -383,10 +401,34 @@ mod tests {
             store.meta_by_url("/guides/install").unwrap().title,
             "Install"
         );
+        assert_eq!(
+            store.meta_by_url("/guides/v1.2").unwrap().title,
+            "Versioned Guide"
+        );
         assert!(store.meta_by_url("/guides").is_none());
 
         let page = store.page_by_url::<()>("/guides/install").unwrap().unwrap();
         assert_eq!(page.title, "Install");
+
+        let dotted = store.page_by_url::<()>("/guides/v1.2").unwrap().unwrap();
+        assert_eq!(dotted.title, "Versioned Guide");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn flatpage_store_ignores_symlinked_directories() {
+        use std::os::unix::fs::symlink;
+
+        let root = TestDir::new();
+        let external = TestDir::new();
+        write_page(root.path(), "index.md", "# Home");
+        write_page(external.path(), "secret.md", "# Secret");
+
+        symlink(external.path(), root.path().join("linked")).unwrap();
+
+        let store = FlatPageStore::read_dir(root.path()).unwrap();
+        assert_eq!(store.meta_by_url("/").unwrap().title, "Home");
+        assert!(store.meta_by_url("/linked/secret").is_none());
     }
 
     struct TestDir {

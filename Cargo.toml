@@ -1,5 +1,5 @@
 [package]
-description = "A simple file system based markdown flat page"
+description = "A simple filesystem-based Markdown page loader"
 edition = "2024"
 license = "MIT"
 name = "flatpage"

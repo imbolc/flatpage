@@ -10,7 +10,7 @@ pub enum Error {
         #[source]
         source: markdown_frontmatter::Error,
         /// The path to the file
-        path: String,
+        path: PathBuf,
     },
     /// Failed to read a directory.
     #[error("failed to read directory: {path}")]

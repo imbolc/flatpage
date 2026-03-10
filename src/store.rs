@@ -55,13 +55,17 @@ impl FlatPageStore {
             Some(url) => url,
             None => return Ok(None),
         };
-        if self.pages.contains_key(&url) {
-            let mut path = self.root.clone();
-            path.push(url_to_path(&url).unwrap());
-            FlatPage::by_path(path)
-        } else {
-            Ok(None)
+        if !self.pages.contains_key(&url) {
+            return Ok(None);
         }
+
+        let Some(relative_path) = url_to_path(&url) else {
+            return Ok(None);
+        };
+
+        let mut path = self.root.clone();
+        path.push(relative_path);
+        FlatPage::by_path(path)
     }
 }
 
@@ -89,11 +93,18 @@ fn read_dir_recursive(
             path: dir.to_path_buf(),
         })?;
         let path = entry.path();
-        if path.is_dir() {
+        let file_type = entry.file_type().map_err(|e| Error::ReadDir {
+            source: e,
+            path: dir.to_path_buf(),
+        })?;
+        if file_type.is_symlink() {
+            continue;
+        }
+        if file_type.is_dir() {
             read_dir_recursive(root, &path, pages)?;
             continue;
         }
-        if !path.is_file() || path.extension() != md_ext {
+        if !file_type.is_file() || path.extension() != md_ext {
             continue;
         }
         let relative_path = match path.strip_prefix(root) {
