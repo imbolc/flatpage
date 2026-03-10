@@ -56,23 +56,7 @@ fn is_valid_url_segment(segment: &str) -> bool {
 /// Tries to convert the URL into a relative Markdown path.
 pub(crate) fn url_to_path(url: &str) -> Option<PathBuf> {
     let url = normalize_url(url)?;
-    if url == "/" {
-        return Some(PathBuf::from("index.md"));
-    }
-
-    let mut path = PathBuf::new();
-    let mut segments = url.trim_matches('/').split('/');
-    let last_segment = segments.next_back()?;
-    for segment in segments {
-        path.push(segment);
-    }
-    if url.ends_with('/') {
-        path.push(last_segment);
-        path.push("index.md");
-    } else {
-        path.push(format!("{last_segment}.md"));
-    }
-    Some(path)
+    Some(normalized_url_to_path(&url))
 }
 
 pub(crate) fn page_path(root: &Path, url: &str) -> Option<PathBuf> {
@@ -80,6 +64,12 @@ pub(crate) fn page_path(root: &Path, url: &str) -> Option<PathBuf> {
     let mut path = root.to_path_buf();
     path.push(relative_path);
     Some(path)
+}
+
+pub(crate) fn page_path_from_normalized_url(root: &Path, url: &str) -> PathBuf {
+    let mut path = root.to_path_buf();
+    path.push(normalized_url_to_path(url));
+    path
 }
 
 pub(crate) fn path_to_url(path: &Path) -> Option<String> {
@@ -111,6 +101,26 @@ pub(crate) fn path_to_url(path: &Path) -> Option<String> {
     }
     components.push(stem);
     Some(format!("/{}", components.join("/")))
+}
+
+fn normalized_url_to_path(url: &str) -> PathBuf {
+    if url == "/" {
+        return PathBuf::from("index.md");
+    }
+
+    let mut path = PathBuf::new();
+    let mut segments = url.trim_matches('/').split('/');
+    let last_segment = segments.next_back().unwrap_or_default();
+    for segment in segments {
+        path.push(segment);
+    }
+    if url.ends_with('/') {
+        path.push(last_segment);
+        path.push("index.md");
+    } else {
+        path.push(format!("{last_segment}.md"));
+    }
+    path
 }
 
 #[cfg(test)]
@@ -163,6 +173,22 @@ mod tests {
         );
         assert_eq!(path_to_url(Path::new("../secret.md")), None);
         assert_eq!(path_to_url(Path::new("guides/../secret.md")), None);
+    }
+
+    #[test]
+    fn test_page_path_from_normalized_url() {
+        assert_eq!(
+            page_path_from_normalized_url(Path::new("pages"), "/"),
+            PathBuf::from("pages/index.md")
+        );
+        assert_eq!(
+            page_path_from_normalized_url(Path::new("pages"), "/guides/install"),
+            PathBuf::from("pages/guides/install.md")
+        );
+        assert_eq!(
+            page_path_from_normalized_url(Path::new("pages"), "/guides/install/"),
+            PathBuf::from("pages/guides/install/index.md")
+        );
     }
 
     #[test]
