@@ -57,16 +57,16 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, serde::Deserialize)]
-struct Frontmatter<E = ()> {
+struct Frontmatter<Extra = ()> {
     title: Option<String>,
     description: Option<String>,
     #[serde(flatten)]
-    extra: E,
+    extra: Extra,
 }
 
 /// Flat page
 #[derive(Debug)]
-pub struct FlatPage<E = ()> {
+pub struct FlatPage<Extra = ()> {
     /// Page title
     pub title: String,
     /// Description - for html meta description, `og:description`, etc
@@ -74,10 +74,10 @@ pub struct FlatPage<E = ()> {
     /// Raw markdown version of the body
     pub body: String,
     /// Extra frontmatter fields (except `title` and `description`)
-    pub extra: E,
+    pub extra: Extra,
 }
 
-impl<E: DeserializeOwned> FlatPage<E> {
+impl<Extra: DeserializeOwned> FlatPage<Extra> {
     /// Returns a page by its url
     pub fn by_url(root: impl Into<PathBuf>, url: &str) -> Result<Option<Self>> {
         let relative_path = match url_to_path(url) {
@@ -124,7 +124,7 @@ impl<E: DeserializeOwned> FlatPage<E> {
                 extra,
             },
             body,
-        ) = markdown_frontmatter::parse::<Frontmatter<E>>(content)?;
+        ) = markdown_frontmatter::parse::<Frontmatter<Extra>>(content)?;
         let title = title.unwrap_or_else(|| title_from_markdown(body).to_string());
         Ok(Self {
             title,
