@@ -114,39 +114,57 @@ fn resolve_title(title: Option<String>, body: &str) -> String {
     title.unwrap_or_else(|| title_from_markdown(body).to_string())
 }
 
-/// Considers the first non-empty line to be the page title, removes markdown
-/// header prefix `#` and optional trailing ATX closing markers
+/// Uses the first non-empty line as the page title.
+///
+/// Valid ATX headings are normalized to plain text by removing the opening `#`
+/// sequence and any optional closing markers.
 fn title_from_markdown(body: &str) -> &str {
     let line = body
         .lines()
         .find(|line| !line.trim().is_empty())
         .unwrap_or_default();
-    if !line.starts_with('#') {
-        return line.trim();
+
+    atx_heading_title(line).unwrap_or_else(|| line.trim())
+}
+
+fn atx_heading_title(line: &str) -> Option<&str> {
+    let indent = line.bytes().take_while(|b| *b == b' ').count();
+    if indent > 3 {
+        return None;
     }
 
-    strip_optional_atx_closing(line.trim_start_matches('#')).trim()
+    let line = &line[indent..];
+    let heading_level = line.bytes().take_while(|b| *b == b'#').count();
+    if heading_level == 0 || heading_level > 6 {
+        return None;
+    }
+
+    let remainder = &line[heading_level..];
+    if remainder
+        .chars()
+        .next()
+        .is_some_and(|ch| !ch.is_whitespace())
+    {
+        return None;
+    }
+
+    Some(strip_optional_atx_closing(
+        remainder.trim_start_matches(char::is_whitespace),
+    ))
 }
 
 fn strip_optional_atx_closing(line: &str) -> &str {
-    let trimmed_end = line.trim_end();
-    let mut hashes_start = trimmed_end.len();
-    for (index, ch) in trimmed_end.char_indices().rev() {
-        if ch == '#' {
-            hashes_start = index;
-        } else {
-            break;
-        }
-    }
-    if hashes_start == trimmed_end.len() {
-        return line;
+    let trimmed_end = line.trim_end_matches(char::is_whitespace);
+    let trailing_hash_count = trimmed_end.bytes().rev().take_while(|b| *b == b'#').count();
+    if trailing_hash_count == 0 {
+        return trimmed_end;
     }
 
-    let prefix = &trimmed_end[..hashes_start];
-    if prefix.chars().last().is_some_and(char::is_whitespace) {
+    let prefix = &trimmed_end[..trimmed_end.len() - trailing_hash_count];
+    if prefix.is_empty() || prefix.chars().last().is_some_and(char::is_whitespace) {
         prefix.trim_end()
     } else {
-        line
+        trimmed_end
     }
 }
 
@@ -271,6 +289,7 @@ fn markdown(text: &str) -> String {
 mod tests {
     use std::{
         path::Path,
+        sync::atomic::{AtomicU64, Ordering},
         time::{SystemTime, UNIX_EPOCH},
     };
 
@@ -339,10 +358,15 @@ mod tests {
     fn test_title_from_markdown() {
         assert_eq!(title_from_markdown("# Foo"), "Foo");
         assert_eq!(title_from_markdown("## Foo"), "Foo");
+        assert_eq!(title_from_markdown("  # Foo"), "Foo");
         assert_eq!(title_from_markdown("# Foo #"), "Foo");
         assert_eq!(title_from_markdown("# Foo ##"), "Foo");
         assert_eq!(title_from_markdown("# Foo#"), "Foo#");
         assert_eq!(title_from_markdown("# #"), "");
+        assert_eq!(title_from_markdown("#"), "");
+        assert_eq!(title_from_markdown("#5 bolt"), "#5 bolt");
+        assert_eq!(title_from_markdown("###Foo"), "###Foo");
+        assert_eq!(title_from_markdown("    # Foo"), "# Foo");
         assert_eq!(title_from_markdown("Foo"), "Foo");
         assert_eq!(title_from_markdown(""), "");
     }
@@ -538,16 +562,28 @@ mod tests {
         path: PathBuf,
     }
 
+    static TEST_DIR_COUNTER: AtomicU64 = AtomicU64::new(0);
+
     impl TestDir {
         fn new() -> Self {
-            let unique = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_nanos();
-            let path =
-                std::env::temp_dir().join(format!("flatpage-test-{}-{unique}", std::process::id()));
-            fs::create_dir_all(&path).unwrap();
-            Self { path }
+            for _ in 0..100 {
+                let timestamp = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos();
+                let counter = TEST_DIR_COUNTER.fetch_add(1, Ordering::Relaxed);
+                let path = std::env::temp_dir().join(format!(
+                    "flatpage-test-{}-{timestamp}-{counter}",
+                    std::process::id()
+                ));
+                match fs::create_dir(&path) {
+                    Ok(()) => return Self { path },
+                    Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+                    Err(error) => panic!("failed to create test directory {path:?}: {error}"),
+                }
+            }
+
+            panic!("failed to create a unique test directory after 100 attempts");
         }
 
         fn path(&self) -> &Path {
