@@ -114,8 +114,8 @@ fn resolve_title(title: Option<String>, body: &str) -> String {
     title.unwrap_or_else(|| title_from_markdown(body).to_string())
 }
 
-/// Considers the first line to be the page title, removes markdown header
-/// prefix `#` and optional trailing ATX closing markers
+/// Considers the first non-empty line to be the page title, removes markdown
+/// header prefix `#` and optional trailing ATX closing markers
 fn title_from_markdown(body: &str) -> &str {
     let line = body
         .lines()
