@@ -68,7 +68,7 @@ let prefix = "/foo/";
 let sub_page_metas = store
     .pages
     .iter()
-    .filter(|(url, _meta)| url.starts_with(prefix));
+    .filter(|(url, _meta)| url.as_ref().starts_with(prefix));
 ```
 
 ## Folder structure

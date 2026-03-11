@@ -1,6 +1,5 @@
 use std::{
     borrow::{Borrow, Cow},
-    ops::Deref,
     path::Component,
 };
 
@@ -69,14 +68,6 @@ impl AsRef<str> for NormalizedUrl<'_> {
 
 impl Borrow<str> for NormalizedUrl<'_> {
     fn borrow(&self) -> &str {
-        self.0.as_ref()
-    }
-}
-
-impl Deref for NormalizedUrl<'_> {
-    type Target = str;
-
-    fn deref(&self) -> &Self::Target {
         self.0.as_ref()
     }
 }
