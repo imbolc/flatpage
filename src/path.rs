@@ -5,12 +5,12 @@ use std::{
 
 const ALLOWED_IN_URL_SEGMENT: &str = "_-.";
 
-/// Converts a URL into an absolute page path under the given root.
+/// Converts a URL into an absolute Markdown path under the given root.
 pub(crate) fn url_to_path(root: &Path, url: &str) -> Option<PathBuf> {
     url_to_rel_path(url).map(|rel| root.join(rel))
 }
 
-/// Tries to convert the URL into a relative page path.
+/// Tries to convert the URL into a relative Markdown path.
 fn url_to_rel_path(url: &str) -> Option<PathBuf> {
     let url = normalize_url(url)?;
     Some(normalized_url_to_path(&url))

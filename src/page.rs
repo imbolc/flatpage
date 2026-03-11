@@ -49,9 +49,8 @@ impl<Extra: DeserializeOwned> FlatPage<Extra> {
     /// I/O failures and frontmatter parsing errors.
     pub fn by_url(root: impl Into<PathBuf>, url: &str) -> Result<Option<Self>> {
         let root = root.into();
-        let path = match url_to_path(&root, url) {
-            Some(path) => path,
-            None => return Ok(None),
+        let Some(path) = url_to_path(&root, url) else {
+            return Ok(None);
         };
         Self::by_path(&path)
     }
