@@ -8,8 +8,7 @@ use serde::de::DeserializeOwned;
 
 use crate::{
     Error, FlatPage, Result,
-    path::path_to_url,
-    util::{AbsPagePath, NormalizedUrl},
+    util::{AbsPagePath, NormalizedUrl, RelPagePath},
 };
 
 /// A store for [`FlatPageMeta`]
@@ -130,15 +129,17 @@ fn read_dir_recursive(
             Ok(relative_path) => relative_path,
             Err(_) => continue,
         };
-        let url = match path_to_url(relative_path) {
-            Some(url) => url,
-            None => continue,
+        let Ok(rel_path) = RelPagePath::try_from(relative_path) else {
+            continue;
+        };
+        let Ok(url) = NormalizedUrl::try_from(&rel_path) else {
+            continue;
         };
         let page_meta = match read_page_meta(&path)? {
             Some(page_meta) => page_meta,
             None => continue,
         };
-        pages.insert(url, page_meta);
+        pages.insert(url.as_ref().to_owned(), page_meta);
     }
     Ok(())
 }

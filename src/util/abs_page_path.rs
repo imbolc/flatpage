@@ -60,7 +60,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_url() {
+    fn test_from_raw_url() {
         assert_eq!(
             AbsPagePath::from_raw_url(Path::new("pages"), "").map(|p| p.0),
             None

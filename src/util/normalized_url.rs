@@ -1,5 +1,6 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, path::Component};
 
+use super::RelPagePath;
 use crate::path::is_valid_url_segment;
 
 /// Canonical page URL.
@@ -62,11 +63,39 @@ impl AsRef<str> for NormalizedUrl<'_> {
     }
 }
 
+impl TryFrom<&RelPagePath> for NormalizedUrl<'static> {
+    type Error = ();
+
+    fn try_from(path: &RelPagePath) -> Result<Self, Self::Error> {
+        let mut components = Vec::new();
+        for component in path.as_ref().components() {
+            let Component::Normal(segment) = component else {
+                return Err(());
+            };
+            let segment = segment.to_str().ok_or(())?;
+            components.push(segment);
+        }
+
+        let file_name = components.pop().ok_or(())?;
+        if file_name == "index.md" {
+            if components.is_empty() {
+                return Ok(Self(Cow::Borrowed("/")));
+            }
+            return Ok(Self(Cow::Owned(format!("/{}/", components.join("/")))));
+        }
+
+        let stem = file_name.strip_suffix(".md").ok_or(())?;
+        components.push(stem);
+        Ok(Self(Cow::Owned(format!("/{}", components.join("/")))))
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use std::borrow::Cow;
+    use std::{borrow::Cow, path::Path};
 
     use super::NormalizedUrl;
+    use crate::util::RelPagePath;
 
     #[test]
     fn test_try_from_rejects_empty_segments() {
@@ -86,5 +115,33 @@ mod tests {
 
         let page = NormalizedUrl::try_from("/foo/bar").unwrap();
         assert!(matches!(page.0, Cow::Borrowed("/foo/bar")));
+    }
+
+    #[test]
+    fn test_try_from_rel_page_path() {
+        let root = NormalizedUrl::try_from(&RelPagePath::try_from(Path::new("index.md")).unwrap())
+            .unwrap();
+        assert_eq!(root.as_ref(), "/");
+
+        let index =
+            NormalizedUrl::try_from(&RelPagePath::try_from(Path::new(".md/index.md")).unwrap())
+                .unwrap();
+        assert_eq!(index.as_ref(), "/.md/");
+
+        let page = NormalizedUrl::try_from(
+            &RelPagePath::try_from(Path::new("guides/getting-started.md")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(page.as_ref(), "/guides/getting-started");
+
+        let index =
+            NormalizedUrl::try_from(&RelPagePath::try_from(Path::new("guides/index.md")).unwrap())
+                .unwrap();
+        assert_eq!(index.as_ref(), "/guides/");
+
+        let dotted =
+            NormalizedUrl::try_from(&RelPagePath::try_from(Path::new("guides/v1.2.md")).unwrap())
+                .unwrap();
+        assert_eq!(dotted.as_ref(), "/guides/v1.2");
     }
 }
