@@ -17,7 +17,7 @@ pub struct FlatPageStore {
     /// The folder containing markdown pages
     root: PathBuf,
     /// Maps normalized URLs such as `/guides/install` to metadata.
-    pub pages: HashMap<String, FlatPageMeta>,
+    pub pages: HashMap<NormalizedUrl<'static>, FlatPageMeta>,
 }
 
 /// Flat page metadata
@@ -85,7 +85,7 @@ impl<Extra> From<FlatPage<Extra>> for FlatPageMeta {
 fn read_dir_recursive(
     root: &Path,
     dir: &Path,
-    pages: &mut HashMap<String, FlatPageMeta>,
+    pages: &mut HashMap<NormalizedUrl<'static>, FlatPageMeta>,
 ) -> Result<()> {
     let md_ext = Some(std::ffi::OsStr::new("md"));
     for entry in fs::read_dir(dir).map_err(|e| Error::ReadDir {
@@ -139,7 +139,7 @@ fn read_dir_recursive(
             Some(page_meta) => page_meta,
             None => continue,
         };
-        pages.insert(url.as_ref().to_owned(), page_meta);
+        pages.insert(url, page_meta);
     }
     Ok(())
 }

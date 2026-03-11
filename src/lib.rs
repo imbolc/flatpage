@@ -16,3 +16,5 @@ pub(crate) mod util;
 pub use error::{Error, Result};
 pub use page::FlatPage;
 pub use store::{FlatPageMeta, FlatPageStore};
+#[doc(inline)]
+pub use util::normalized_url::NormalizedUrl;

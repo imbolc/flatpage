@@ -1,10 +1,15 @@
-use std::{borrow::Cow, path::Component};
+use std::{
+    borrow::{Borrow, Cow},
+    ops::Deref,
+    path::Component,
+};
 
 use super::RelPagePath;
 use crate::path::is_valid_url_segment;
 
 /// Canonical page URL.
-pub(crate) struct NormalizedUrl<'a>(Cow<'a, str>);
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct NormalizedUrl<'a>(Cow<'a, str>);
 
 impl<'a> TryFrom<&'a str> for NormalizedUrl<'a> {
     type Error = ();
@@ -59,6 +64,20 @@ impl<'a> TryFrom<&'a str> for NormalizedUrl<'a> {
 
 impl AsRef<str> for NormalizedUrl<'_> {
     fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
+impl Borrow<str> for NormalizedUrl<'_> {
+    fn borrow(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
+impl Deref for NormalizedUrl<'_> {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
         self.0.as_ref()
     }
 }
