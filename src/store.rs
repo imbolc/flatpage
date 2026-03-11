@@ -114,19 +114,10 @@ fn read_dir_recursive(
     pages: &mut HashMap<NormalizedUrl<'static>, FlatPageMeta>,
 ) -> Result<()> {
     let md_ext = Some(std::ffi::OsStr::new("md"));
-    for entry in fs::read_dir(dir).map_err(|e| Error::ReadDir {
-        source: e,
-        path: dir.to_path_buf(),
-    })? {
-        let entry = entry.map_err(|e| Error::ReadDir {
-            source: e,
-            path: dir.to_path_buf(),
-        })?;
+    for entry in fs::read_dir(dir).map_err(|e| Error::read_dir(e, dir))? {
+        let entry = entry.map_err(|e| Error::read_dir(e, dir))?;
         let path = entry.path();
-        let file_type = entry.file_type().map_err(|e| Error::ReadDir {
-            source: e,
-            path: dir.to_path_buf(),
-        })?;
+        let file_type = entry.file_type().map_err(|e| Error::read_dir(e, dir))?;
         let is_markdown_file = if file_type.is_symlink() {
             if path.extension() != md_ext {
                 continue;
@@ -134,12 +125,7 @@ fn read_dir_recursive(
             let metadata = match fs::metadata(&path) {
                 Ok(metadata) => metadata,
                 Err(error) if error.kind() == io::ErrorKind::NotFound => continue,
-                Err(error) => {
-                    return Err(Error::ReadMetadata {
-                        source: error,
-                        path: path.clone(),
-                    });
-                }
+                Err(error) => return Err(Error::read_metadata(error, &path)),
             };
             metadata.is_file()
         } else if file_type.is_dir() {

@@ -58,19 +58,11 @@ impl<Extra: DeserializeOwned> FlatPage<Extra> {
         let content = match fs::read_to_string(path) {
             Ok(c) => c,
             Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(None),
-            Err(e) => {
-                return Err(Error::ReadFile {
-                    source: e,
-                    path: path.to_path_buf(),
-                });
-            }
+            Err(e) => return Err(Error::read_file(e, path)),
         };
         Self::from_content(&content)
             .map(Some)
-            .map_err(|e| Error::ParseFrontmatter {
-                source: e,
-                path: path.to_path_buf(),
-            })
+            .map_err(|e| Error::parse_frontmatter(e, path))
     }
 
     /// [`FlatPage::body`] rendered to HTML

@@ -44,5 +44,42 @@ pub enum Error {
     },
 }
 
+impl Error {
+    /// Creates a frontmatter parsing error for the given path.
+    pub fn parse_frontmatter(
+        source: markdown_frontmatter::Error,
+        path: impl Into<PathBuf>,
+    ) -> Self {
+        Self::ParseFrontmatter {
+            source,
+            path: path.into(),
+        }
+    }
+
+    /// Creates a directory-reading error for the given path.
+    pub fn read_dir(source: io::Error, path: impl Into<PathBuf>) -> Self {
+        Self::ReadDir {
+            source,
+            path: path.into(),
+        }
+    }
+
+    /// Creates a filesystem metadata error for the given path.
+    pub fn read_metadata(source: io::Error, path: impl Into<PathBuf>) -> Self {
+        Self::ReadMetadata {
+            source,
+            path: path.into(),
+        }
+    }
+
+    /// Creates a file-reading error for the given path.
+    pub fn read_file(source: io::Error, path: impl Into<PathBuf>) -> Self {
+        Self::ReadFile {
+            source,
+            path: path.into(),
+        }
+    }
+}
+
 /// The crate's result type
 pub type Result<T> = std::result::Result<T, Error>;
