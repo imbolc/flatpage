@@ -8,7 +8,8 @@ pub(crate) struct AbsPagePath(PathBuf);
 impl AbsPagePath {
     /// Converts a URL into an absolute Markdown path under the given root.
     pub(crate) fn from_url(root: &Path, url: &str) -> Option<Self> {
-        RelPagePath::from_url(url).map(|rel| Self(root.join(rel.as_ref())))
+        let url = NormalizedUrl::try_from(url).ok()?;
+        Some(Self::from_normalized_url(root, &url))
     }
 
     /// Converts a normalized URL into an absolute Markdown path under the given
