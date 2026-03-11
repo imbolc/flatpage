@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use super::rel_page_path::RelPagePath;
+use super::RelPagePath;
 
 /// Absolute Markdown path
 pub(crate) struct AbsPagePath(PathBuf);
