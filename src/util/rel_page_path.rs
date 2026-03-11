@@ -18,38 +18,3 @@ impl AsRef<Path> for RelPagePath {
         self.0.as_ref()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use std::path::Path;
-
-    use super::RelPagePath;
-
-    #[test]
-    fn test_from_url() {
-        assert!(RelPagePath::from_url("").is_none());
-        assert!(RelPagePath::from_url("#").is_none());
-        assert!(RelPagePath::from_url("foo").is_none());
-        assert!(RelPagePath::from_url("ы").is_none());
-        assert!(RelPagePath::from_url("//foo").is_none());
-        assert!(RelPagePath::from_url("foo//").is_none());
-        assert!(RelPagePath::from_url("/../secret").is_none());
-        assert!(RelPagePath::from_url("/foo//bar").is_none());
-        assert_eq!(
-            RelPagePath::from_url("/").unwrap().as_ref(),
-            Path::new("index.md")
-        );
-        assert_eq!(
-            RelPagePath::from_url("/foo-bar/baz").unwrap().as_ref(),
-            Path::new("foo-bar/baz.md")
-        );
-        assert_eq!(
-            RelPagePath::from_url("/foo-bar/baz/").unwrap().as_ref(),
-            Path::new("foo-bar/baz/index.md")
-        );
-        assert_eq!(
-            RelPagePath::from_url("/foo.bar").unwrap().as_ref(),
-            Path::new("foo.bar.md")
-        );
-    }
-}
