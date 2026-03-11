@@ -237,6 +237,17 @@ mod tests {
         );
     }
 
+    #[test]
+    fn flatpage_store_reports_read_dir_error() {
+        let root = TestDir::new();
+        let path = root.path().join("index.md");
+        write_page(root.path(), "index.md", "# Home");
+
+        assert!(
+            matches!(FlatPageStore::read_dir(&path), Err(Error::ReadDir { path: error_path, .. }) if error_path == path)
+        );
+    }
+
     #[cfg(unix)]
     #[test]
     fn flatpage_store_ignores_symlinked_directories() {

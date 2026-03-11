@@ -223,6 +223,17 @@ mod tests {
         assert!(FlatPage::<()>::by_path(&path).unwrap().is_none());
     }
 
+    #[test]
+    fn flatpage_by_path_reports_read_file_error() {
+        let root = TestDir::new();
+        let path = root.path().join("guides");
+        std::fs::create_dir(&path).unwrap();
+
+        assert!(
+            matches!(FlatPage::<()>::by_path(&path), Err(Error::ReadFile { path: error_path, .. }) if error_path == path)
+        );
+    }
+
     #[cfg(feature = "json")]
     #[test]
     fn flatpage_by_path_reports_json_frontmatter_error() {
