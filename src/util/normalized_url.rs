@@ -4,8 +4,7 @@ use std::{
     path::Component,
 };
 
-use super::RelPagePath;
-use crate::path::is_valid_url_segment;
+use super::{RelPagePath, is_valid_page_segment};
 
 /// Canonical page URL.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -42,7 +41,7 @@ impl<'a> TryFrom<&'a str> for NormalizedUrl<'a> {
 
         let mut normalized = String::from("/");
         for (index, segment) in url.split('/').enumerate() {
-            if !is_valid_url_segment(segment) {
+            if !is_valid_page_segment(segment) {
                 return Err(());
             }
             if index > 0 {

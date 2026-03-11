@@ -7,7 +7,6 @@ compile_error!("enable at least one frontmatter feature: json, toml, yaml");
 mod error;
 mod markdown;
 mod page;
-mod path;
 mod store;
 #[cfg(test)]
 mod test_helpers;

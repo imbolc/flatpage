@@ -1,15 +1,30 @@
 use std::path::{Component, Path, PathBuf};
 
-use super::NormalizedUrl;
-use crate::path::{is_valid_url_segment, normalized_url_to_path};
+use super::{NormalizedUrl, is_valid_page_segment};
 
 /// Relative Markdown path
 pub(crate) struct RelPagePath(PathBuf);
 
-impl RelPagePath {
-    /// Converts a normalized URL into a relative Markdown path.
-    pub(crate) fn from_normalized_url(url: &NormalizedUrl<'_>) -> Self {
-        Self(normalized_url_to_path(url.as_ref()))
+impl From<&NormalizedUrl<'_>> for RelPagePath {
+    fn from(url: &NormalizedUrl<'_>) -> Self {
+        if url.as_ref() == "/" {
+            return Self(PathBuf::from("index.md"));
+        }
+
+        let mut path = PathBuf::new();
+        let mut segments = url.as_ref().trim_matches('/').split('/');
+        let last_segment = segments.next_back().unwrap_or_default();
+        for segment in segments {
+            path.push(segment);
+        }
+        if url.as_ref().ends_with('/') {
+            path.push(last_segment);
+            path.push("index.md");
+        } else {
+            path.push(format!("{last_segment}.md"));
+        }
+
+        Self(path)
     }
 }
 
@@ -28,7 +43,7 @@ impl TryFrom<&Path> for RelPagePath {
 
         let file_name = components.pop().ok_or(())?;
         for segment in &components {
-            if !is_valid_url_segment(segment) {
+            if !is_valid_page_segment(segment) {
                 return Err(());
             }
         }
@@ -38,7 +53,7 @@ impl TryFrom<&Path> for RelPagePath {
         }
 
         let stem = file_name.strip_suffix(".md").ok_or(())?;
-        if !is_valid_url_segment(stem) {
+        if !is_valid_page_segment(stem) {
             return Err(());
         }
 

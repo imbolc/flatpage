@@ -15,7 +15,7 @@ impl AbsPagePath {
     /// Converts a normalized URL into an absolute Markdown path under the given
     /// root.
     pub(crate) fn from_normalized_url(root: &Path, url: &NormalizedUrl<'_>) -> Self {
-        let rel = RelPagePath::from_normalized_url(url);
+        let rel = RelPagePath::from(url);
         Self(root.join(rel.as_ref()))
     }
 }

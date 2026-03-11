@@ -19,13 +19,6 @@ struct Frontmatter<Extra = ()> {
     extra: Extra,
 }
 
-struct ParsedPage<'a, Extra = ()> {
-    title: String,
-    description: Option<String>,
-    body: &'a str,
-    extra: Extra,
-}
-
 /// Flat page
 #[derive(Debug)]
 pub struct FlatPage<Extra = ()> {
@@ -85,46 +78,21 @@ impl<Extra: DeserializeOwned> FlatPage<Extra> {
 
     /// Parses a page from text
     fn from_content(content: &str) -> std::result::Result<Self, markdown_frontmatter::Error> {
-        let ParsedPage {
-            title,
-            description,
+        let (
+            Frontmatter {
+                title,
+                description,
+                extra,
+            },
             body,
-            extra,
-        } = parse_page_content(content)?;
+        ) = markdown_frontmatter::parse::<Frontmatter<Extra>>(content)?;
         Ok(Self {
-            title,
+            title: resolve_title(title, body),
             description,
             body: body.to_string(),
             extra,
         })
     }
-}
-
-/// Parses frontmatter and returns the remaining Markdown body unchanged.
-fn frontmatter_and_body<Extra: DeserializeOwned>(
-    content: &str,
-) -> std::result::Result<(Frontmatter<Extra>, &str), markdown_frontmatter::Error> {
-    markdown_frontmatter::parse::<Frontmatter<Extra>>(content)
-}
-
-/// Parses a page body into resolved title, description, body, and extra fields.
-fn parse_page_content<Extra: DeserializeOwned>(
-    content: &str,
-) -> std::result::Result<ParsedPage<'_, Extra>, markdown_frontmatter::Error> {
-    let (
-        Frontmatter {
-            title,
-            description,
-            extra,
-        },
-        body,
-    ) = frontmatter_and_body(content)?;
-    Ok(ParsedPage {
-        title: resolve_title(title, body),
-        description,
-        body,
-        extra,
-    })
 }
 
 #[cfg(test)]
