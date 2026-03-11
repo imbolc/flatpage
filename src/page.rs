@@ -8,7 +8,7 @@ use serde::de::DeserializeOwned;
 use crate::{
     Error, Result,
     markdown::{markdown, resolve_title},
-    path::url_to_path,
+    path::AbsPagePath,
 };
 
 #[derive(Debug, serde::Deserialize)]
@@ -49,7 +49,7 @@ impl<Extra: DeserializeOwned> FlatPage<Extra> {
     /// I/O failures and frontmatter parsing errors.
     pub fn by_url(root: impl Into<PathBuf>, url: &str) -> Result<Option<Self>> {
         let root = root.into();
-        let Some(path) = url_to_path(&root, url) else {
+        let Some(path) = AbsPagePath::from_url(&root, url) else {
             return Ok(None);
         };
         Self::by_path(&path)

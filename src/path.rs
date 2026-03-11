@@ -5,9 +5,20 @@ use std::{
 
 const ALLOWED_IN_URL_SEGMENT: &str = "_-.";
 
-/// Converts a URL into an absolute Markdown path under the given root.
-pub(crate) fn url_to_path(root: &Path, url: &str) -> Option<PathBuf> {
-    url_to_rel_path(url).map(|rel| root.join(rel))
+/// Absolute Markdown path
+pub(crate) struct AbsPagePath(pub PathBuf);
+
+impl AbsPagePath {
+    /// Converts a URL into an absolute Markdown path under the given root.
+    pub(crate) fn from_url(root: &Path, url: &str) -> Option<Self> {
+        url_to_rel_path(url).map(|rel| Self(root.join(rel)))
+    }
+}
+
+impl AsRef<Path> for AbsPagePath {
+    fn as_ref(&self) -> &Path {
+        self.0.as_ref()
+    }
 }
 
 /// Tries to convert the URL into a relative Markdown path.
