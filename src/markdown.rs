@@ -1,3 +1,5 @@
+//! Markdown title extraction and HTML rendering helpers.
+
 use std::ops::Range;
 
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd, html, utils::TextMergeWithOffset};

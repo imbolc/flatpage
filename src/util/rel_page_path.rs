@@ -1,14 +1,21 @@
+//! Relative page-path conversions and shared page-shape mapping.
+
 use std::path::{Component, Path, PathBuf};
 
 use super::{NormalizedUrl, is_valid_page_segment};
 
+/// Shared page-shape representation used by URL and path conversions.
 pub(super) enum PageShape<'a> {
+    /// The root page (`/` or `index.md`).
     Root,
+    /// A leaf page such as `/guides/install`.
     File(Vec<&'a str>),
+    /// A directory index page such as `/guides/`.
     Index(Vec<&'a str>),
 }
 
 impl<'a> PageShape<'a> {
+    /// Splits a normalized URL into its logical page shape.
     pub(super) fn from_normalized_url(url: &'a str) -> Self {
         if url == "/" {
             return Self::Root;
@@ -22,6 +29,7 @@ impl<'a> PageShape<'a> {
         }
     }
 
+    /// Validates and classifies a relative Markdown path.
     pub(super) fn try_from_rel_path(path: &'a Path) -> Result<Self, ()> {
         let mut components = Vec::new();
         for component in path.components() {
@@ -54,6 +62,7 @@ impl<'a> PageShape<'a> {
         Ok(Self::File(components))
     }
 
+    /// Builds a relative Markdown path from a classified page shape.
     fn to_rel_path_buf(&self) -> PathBuf {
         match self {
             Self::Root => PathBuf::from("index.md"),
@@ -83,6 +92,7 @@ impl<'a> PageShape<'a> {
 pub(crate) struct RelPagePath(PathBuf);
 
 impl From<&NormalizedUrl<'_>> for RelPagePath {
+    /// Converts a normalized URL into its relative Markdown path.
     fn from(url: &NormalizedUrl<'_>) -> Self {
         Self(PageShape::from_normalized_url(url.as_ref()).to_rel_path_buf())
     }
@@ -91,6 +101,7 @@ impl From<&NormalizedUrl<'_>> for RelPagePath {
 impl TryFrom<&Path> for RelPagePath {
     type Error = ();
 
+    /// Validates and wraps a relative Markdown path.
     fn try_from(path: &Path) -> Result<Self, Self::Error> {
         PageShape::try_from_rel_path(path)?;
         Ok(Self(path.to_path_buf()))
@@ -98,6 +109,7 @@ impl TryFrom<&Path> for RelPagePath {
 }
 
 impl AsRef<Path> for RelPagePath {
+    /// Returns the wrapped relative path.
     fn as_ref(&self) -> &Path {
         self.0.as_ref()
     }

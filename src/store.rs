@@ -1,3 +1,5 @@
+//! Directory-backed page metadata indexing.
+
 use std::{
     collections::HashMap,
     fs, io,

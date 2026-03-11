@@ -1,3 +1,5 @@
+//! Error types for page loading and directory scanning.
+
 use std::{io, path::PathBuf};
 
 /// The crate's error type

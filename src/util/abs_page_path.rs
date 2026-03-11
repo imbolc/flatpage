@@ -1,3 +1,5 @@
+//! Absolute page-path conversions.
+
 use std::path::{Path, PathBuf};
 
 use super::{NormalizedUrl, RelPagePath};
@@ -21,6 +23,7 @@ impl AbsPagePath {
 }
 
 impl AsRef<Path> for AbsPagePath {
+    /// Returns the wrapped absolute path.
     fn as_ref(&self) -> &Path {
         self.0.as_ref()
     }

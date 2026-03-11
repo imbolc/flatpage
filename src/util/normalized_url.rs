@@ -1,3 +1,5 @@
+//! Normalized page URL parsing and conversions.
+
 use std::borrow::{Borrow, Cow};
 
 use super::{RelPagePath, is_valid_page_segment, rel_page_path::PageShape};
@@ -9,6 +11,7 @@ pub struct NormalizedUrl<'a>(Cow<'a, str>);
 impl<'a> TryFrom<&'a str> for NormalizedUrl<'a> {
     type Error = ();
 
+    /// Validates and wraps a raw page URL string.
     fn try_from(url: &'a str) -> Result<Self, Self::Error> {
         let original_url = url;
         if url.is_empty() {
@@ -45,18 +48,21 @@ impl<'a> TryFrom<&'a str> for NormalizedUrl<'a> {
 }
 
 impl AsRef<str> for NormalizedUrl<'_> {
+    /// Returns the normalized URL as a string slice.
     fn as_ref(&self) -> &str {
         self.0.as_ref()
     }
 }
 
 impl Borrow<str> for NormalizedUrl<'_> {
+    /// Borrows the normalized URL as a string slice.
     fn borrow(&self) -> &str {
         self.0.as_ref()
     }
 }
 
 impl From<PageShape<'_>> for NormalizedUrl<'static> {
+    /// Converts a validated page shape into a normalized URL.
     fn from(page_shape: PageShape<'_>) -> Self {
         match page_shape {
             PageShape::Root => Self(Cow::Borrowed("/")),
@@ -69,6 +75,7 @@ impl From<PageShape<'_>> for NormalizedUrl<'static> {
 impl TryFrom<&RelPagePath> for NormalizedUrl<'static> {
     type Error = ();
 
+    /// Converts a validated relative page path into a normalized URL.
     fn try_from(path: &RelPagePath) -> Result<Self, Self::Error> {
         Ok(PageShape::try_from_rel_path(path.as_ref())?.into())
     }

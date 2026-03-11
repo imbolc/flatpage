@@ -1,3 +1,5 @@
+//! Test-only filesystem helpers.
+
 use std::{
     fs, io,
     path::{Path, PathBuf},
@@ -5,10 +7,13 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+/// Temporary directory wrapper used by tests.
 pub(crate) struct TestDir {
+    /// Filesystem path of the temporary directory.
     path: PathBuf,
 }
 
+/// Monotonic counter that helps keep test directory names unique.
 static TEST_DIR_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 impl TestDir {

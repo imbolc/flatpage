@@ -1,3 +1,5 @@
+//! Internal typed helpers for page URLs and paths.
+
 pub(crate) mod abs_page_path;
 pub(crate) mod normalized_url;
 pub(crate) mod page_segment;

@@ -1,3 +1,6 @@
+//! Validation rules for individual page-path segments.
+
+/// ASCII punctuation accepted inside a single page segment.
 const ALLOWED_IN_PAGE_SEGMENT: &str = "_-.";
 
 /// Returns whether a single page path segment is accepted by the crate.

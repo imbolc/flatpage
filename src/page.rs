@@ -1,3 +1,5 @@
+//! Page parsing and filesystem loading.
+
 use std::{
     fs, io,
     path::{Path, PathBuf},
@@ -11,10 +13,14 @@ use crate::{
     util::AbsPagePath,
 };
 
+/// Parsed frontmatter fields before they are assembled into a [`FlatPage`].
 #[derive(Debug, serde::Deserialize)]
 struct Frontmatter<Extra = ()> {
+    /// Optional explicit page title from frontmatter.
     title: Option<String>,
+    /// Optional description from frontmatter.
     description: Option<String>,
+    /// Additional caller-defined frontmatter fields.
     #[serde(flatten)]
     extra: Extra,
 }
