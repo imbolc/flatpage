@@ -7,7 +7,7 @@ pub(crate) struct AbsPagePath(PathBuf);
 
 impl AbsPagePath {
     /// Converts a URL into an absolute Markdown path under the given root.
-    pub(crate) fn from_url(root: &Path, url: &str) -> Option<Self> {
+    pub(crate) fn from_raw_url(root: &Path, url: &str) -> Option<Self> {
         let url = NormalizedUrl::try_from(url).ok()?;
         Some(Self::from_normalized_url(root, &url))
     }
@@ -62,11 +62,11 @@ mod tests {
     #[test]
     fn test_from_url() {
         assert_eq!(
-            AbsPagePath::from_url(Path::new("pages"), "").map(|p| p.0),
+            AbsPagePath::from_raw_url(Path::new("pages"), "").map(|p| p.0),
             None
         );
         assert_eq!(
-            AbsPagePath::from_url(Path::new("pages"), "/guides/install").map(|p| p.0),
+            AbsPagePath::from_raw_url(Path::new("pages"), "/guides/install").map(|p| p.0),
             Some(PathBuf::from("pages/guides/install.md"))
         );
     }
