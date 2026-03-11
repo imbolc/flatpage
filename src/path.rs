@@ -62,10 +62,7 @@ pub(crate) fn url_to_path(url: &str) -> Option<PathBuf> {
 
 /// Converts a URL into an absolute Markdown path under the given root.
 pub(crate) fn page_path(root: &Path, url: &str) -> Option<PathBuf> {
-    let relative_path = url_to_path(url)?;
-    let mut path = root.to_path_buf();
-    path.push(relative_path);
-    Some(path)
+    url_to_path(url).map(|rel| root.join(rel))
 }
 
 /// Converts an already normalized URL into an absolute Markdown path.
