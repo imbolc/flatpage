@@ -11,7 +11,7 @@ mod path;
 mod store;
 #[cfg(test)]
 mod test_helpers;
-mod util;
+pub(crate) mod util;
 
 pub use error::{Error, Result};
 pub use page::FlatPage;
