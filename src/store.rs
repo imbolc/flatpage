@@ -46,7 +46,7 @@ impl FlatPageStore {
     /// Returns `None` for invalid URLs and missing pages.
     pub fn meta_by_url(&self, url: &str) -> Option<&FlatPageMeta> {
         let url = normalize_url(url)?;
-        self.pages.get(&url)
+        self.pages.get(url.as_ref())
     }
 
     /// Returns a page by URL.
@@ -62,7 +62,7 @@ impl FlatPageStore {
         };
         // Intentionally check the in-memory index first so missing pages avoid
         // filesystem access.
-        if !self.pages.contains_key(&url) {
+        if !self.pages.contains_key(url.as_ref()) {
             return Ok(None);
         }
 

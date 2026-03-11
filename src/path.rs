@@ -1,4 +1,7 @@
-use std::path::{Component, Path, PathBuf};
+use std::{
+    borrow::Cow,
+    path::{Component, Path, PathBuf},
+};
 
 const ALLOWED_IN_URL_SEGMENT: &str = "_-.";
 
@@ -14,7 +17,7 @@ fn url_to_rel_path(url: &str) -> Option<PathBuf> {
 }
 
 /// Tries to normalize the URL.
-pub(crate) fn normalize_url(url: &str) -> Option<String> {
+pub(crate) fn normalize_url(url: &str) -> Option<Cow<'_, str>> {
     if url.is_empty() {
         return None;
     }
@@ -52,7 +55,7 @@ pub(crate) fn normalize_url(url: &str) -> Option<String> {
     if trailing_slash {
         normalized.push('/');
     }
-    Some(normalized)
+    Some(normalized.into())
 }
 
 /// Returns whether a single URL path segment is accepted by the crate.
