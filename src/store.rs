@@ -113,30 +113,18 @@ fn read_dir_recursive(
     dir: &Path,
     pages: &mut HashMap<NormalizedUrl<'static>, FlatPageMeta>,
 ) -> Result<()> {
-    let md_ext = Some(std::ffi::OsStr::new("md"));
     for entry in fs::read_dir(dir).map_err(|e| Error::read_dir(e, dir))? {
         let entry = entry.map_err(|e| Error::read_dir(e, dir))?;
         let path = entry.path();
         let file_type = entry.file_type().map_err(|e| Error::read_dir(e, dir))?;
-        let is_markdown_file = if file_type.is_symlink() {
-            if path.extension() != md_ext {
+        match StoreEntryKind::classify(&path, &file_type)? {
+            StoreEntryKind::Directory => {
+                read_dir_recursive(root, &path, pages)?;
                 continue;
             }
-            let metadata = match fs::metadata(&path) {
-                Ok(metadata) => metadata,
-                Err(error) if error.kind() == io::ErrorKind::NotFound => continue,
-                Err(error) => return Err(Error::read_metadata(error, &path)),
-            };
-            metadata.is_file()
-        } else if file_type.is_dir() {
-            read_dir_recursive(root, &path, pages)?;
-            continue;
-        } else {
-            file_type.is_file() && path.extension() == md_ext
+            StoreEntryKind::MarkdownFile => {}
+            StoreEntryKind::Skip => continue,
         };
-        if !is_markdown_file {
-            continue;
-        }
         let relative_path = match path.strip_prefix(root) {
             Ok(relative_path) => relative_path,
             Err(_) => continue,
@@ -153,6 +141,51 @@ fn read_dir_recursive(
         pages.insert(url, page_meta);
     }
     Ok(())
+}
+
+/// Classification of a directory entry during store scanning.
+enum StoreEntryKind {
+    /// Recursively scan this directory.
+    Directory,
+    /// Parse this Markdown file into store metadata.
+    MarkdownFile,
+    /// Ignore this entry.
+    Skip,
+}
+
+impl StoreEntryKind {
+    /// Classifies a directory entry for the store scan.
+    fn classify(path: &Path, file_type: &fs::FileType) -> Result<Self> {
+        let md_ext = Some(std::ffi::OsStr::new("md"));
+
+        if file_type.is_symlink() {
+            if path.extension() != md_ext {
+                return Ok(Self::Skip);
+            }
+            let metadata = match fs::metadata(path) {
+                Ok(metadata) => metadata,
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                    return Ok(Self::Skip);
+                }
+                Err(error) => return Err(Error::read_metadata(error, path)),
+            };
+            return Ok(if metadata.is_file() {
+                Self::MarkdownFile
+            } else {
+                Self::Skip
+            });
+        }
+
+        if file_type.is_dir() {
+            return Ok(Self::Directory);
+        }
+
+        Ok(if file_type.is_file() && path.extension() == md_ext {
+            Self::MarkdownFile
+        } else {
+            Self::Skip
+        })
+    }
 }
 
 #[cfg(test)]
