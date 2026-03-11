@@ -2,36 +2,27 @@ use std::path::{Component, Path, PathBuf};
 
 use super::{NormalizedUrl, is_valid_page_segment};
 
-/// Relative Markdown path
-pub(crate) struct RelPagePath(PathBuf);
-
-impl From<&NormalizedUrl<'_>> for RelPagePath {
-    fn from(url: &NormalizedUrl<'_>) -> Self {
-        if url.as_ref() == "/" {
-            return Self(PathBuf::from("index.md"));
-        }
-
-        let mut path = PathBuf::new();
-        let mut segments = url.as_ref().trim_matches('/').split('/');
-        let last_segment = segments.next_back().unwrap_or_default();
-        for segment in segments {
-            path.push(segment);
-        }
-        if url.as_ref().ends_with('/') {
-            path.push(last_segment);
-            path.push("index.md");
-        } else {
-            path.push(format!("{last_segment}.md"));
-        }
-
-        Self(path)
-    }
+pub(super) enum PageShape<'a> {
+    Root,
+    File(Vec<&'a str>),
+    Index(Vec<&'a str>),
 }
 
-impl TryFrom<&Path> for RelPagePath {
-    type Error = ();
+impl<'a> PageShape<'a> {
+    pub(super) fn from_normalized_url(url: &'a str) -> Self {
+        if url == "/" {
+            return Self::Root;
+        }
 
-    fn try_from(path: &Path) -> Result<Self, Self::Error> {
+        let segments = url.trim_matches('/').split('/').collect();
+        if url.ends_with('/') {
+            Self::Index(segments)
+        } else {
+            Self::File(segments)
+        }
+    }
+
+    pub(super) fn try_from_rel_path(path: &'a Path) -> Result<Self, ()> {
         let mut components = Vec::new();
         for component in path.components() {
             let Component::Normal(segment) = component else {
@@ -49,14 +40,59 @@ impl TryFrom<&Path> for RelPagePath {
         }
 
         if file_name == "index.md" {
-            return Ok(Self(path.to_path_buf()));
+            if components.is_empty() {
+                return Ok(Self::Root);
+            }
+            return Ok(Self::Index(components));
         }
 
         let stem = file_name.strip_suffix(".md").ok_or(())?;
         if !is_valid_page_segment(stem) {
             return Err(());
         }
+        components.push(stem);
+        Ok(Self::File(components))
+    }
 
+    fn to_rel_path_buf(&self) -> PathBuf {
+        match self {
+            Self::Root => PathBuf::from("index.md"),
+            Self::File(segments) => {
+                let mut path = PathBuf::new();
+                let mut segments = segments.iter().copied();
+                let last_segment = segments.next_back().unwrap_or_default();
+                for segment in segments {
+                    path.push(segment);
+                }
+                path.push(format!("{last_segment}.md"));
+                path
+            }
+            Self::Index(segments) => {
+                let mut path = PathBuf::new();
+                for segment in segments {
+                    path.push(segment);
+                }
+                path.push("index.md");
+                path
+            }
+        }
+    }
+}
+
+/// Relative Markdown path
+pub(crate) struct RelPagePath(PathBuf);
+
+impl From<&NormalizedUrl<'_>> for RelPagePath {
+    fn from(url: &NormalizedUrl<'_>) -> Self {
+        Self(PageShape::from_normalized_url(url.as_ref()).to_rel_path_buf())
+    }
+}
+
+impl TryFrom<&Path> for RelPagePath {
+    type Error = ();
+
+    fn try_from(path: &Path) -> Result<Self, Self::Error> {
+        PageShape::try_from_rel_path(path)?;
         Ok(Self(path.to_path_buf()))
     }
 }

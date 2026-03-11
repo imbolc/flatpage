@@ -1,9 +1,6 @@
-use std::{
-    borrow::{Borrow, Cow},
-    path::Component,
-};
+use std::borrow::{Borrow, Cow};
 
-use super::{RelPagePath, is_valid_page_segment};
+use super::{RelPagePath, is_valid_page_segment, rel_page_path::PageShape};
 
 /// Canonical page URL.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -72,30 +69,21 @@ impl Borrow<str> for NormalizedUrl<'_> {
     }
 }
 
+impl From<PageShape<'_>> for NormalizedUrl<'static> {
+    fn from(page_shape: PageShape<'_>) -> Self {
+        match page_shape {
+            PageShape::Root => Self(Cow::Borrowed("/")),
+            PageShape::File(segments) => Self(Cow::Owned(format!("/{}", segments.join("/")))),
+            PageShape::Index(segments) => Self(Cow::Owned(format!("/{}/", segments.join("/")))),
+        }
+    }
+}
+
 impl TryFrom<&RelPagePath> for NormalizedUrl<'static> {
     type Error = ();
 
     fn try_from(path: &RelPagePath) -> Result<Self, Self::Error> {
-        let mut components = Vec::new();
-        for component in path.as_ref().components() {
-            let Component::Normal(segment) = component else {
-                return Err(());
-            };
-            let segment = segment.to_str().ok_or(())?;
-            components.push(segment);
-        }
-
-        let file_name = components.pop().ok_or(())?;
-        if file_name == "index.md" {
-            if components.is_empty() {
-                return Ok(Self(Cow::Borrowed("/")));
-            }
-            return Ok(Self(Cow::Owned(format!("/{}/", components.join("/")))));
-        }
-
-        let stem = file_name.strip_suffix(".md").ok_or(())?;
-        components.push(stem);
-        Ok(Self(Cow::Owned(format!("/{}", components.join("/")))))
+        Ok(PageShape::try_from_rel_path(path.as_ref())?.into())
     }
 }
 
