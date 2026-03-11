@@ -77,7 +77,7 @@ impl TryFrom<&RelPagePath> for NormalizedUrl<'static> {
 
     /// Converts a validated relative page path into a normalized URL.
     fn try_from(path: &RelPagePath) -> Result<Self, Self::Error> {
-        Ok(PageShape::try_from_rel_path(path.as_ref())?.into())
+        Ok(PageShape::try_from(path)?.into())
     }
 }
 

@@ -10,7 +10,7 @@ pub(crate) struct RelPagePath(PathBuf);
 impl From<&NormalizedUrl<'_>> for RelPagePath {
     /// Converts a normalized URL into its relative Markdown path.
     fn from(url: &NormalizedUrl<'_>) -> Self {
-        PageShape::from_normalized_url(url.as_ref()).into()
+        PageShape::from(url).into()
     }
 }
 
@@ -19,7 +19,7 @@ impl TryFrom<&Path> for RelPagePath {
 
     /// Validates and wraps a relative Markdown path.
     fn try_from(path: &Path) -> Result<Self, Self::Error> {
-        PageShape::try_from_rel_path(path)?;
+        PageShape::try_from(path)?;
         Ok(Self(path.to_path_buf()))
     }
 }
@@ -41,9 +41,10 @@ pub(super) enum PageShape<'a> {
     Index(Vec<&'a str>),
 }
 
-impl<'a> PageShape<'a> {
+impl<'a> From<&'a NormalizedUrl<'_>> for PageShape<'a> {
     /// Splits a normalized URL into its logical page shape.
-    pub(super) fn from_normalized_url(url: &'a str) -> Self {
+    fn from(url: &'a NormalizedUrl<'_>) -> Self {
+        let url = url.as_ref();
         if url == "/" {
             return Self::Root;
         }
@@ -55,16 +56,19 @@ impl<'a> PageShape<'a> {
             Self::File(segments)
         }
     }
+}
 
-    /// Validates and classifies a relative Markdown path.
-    pub(super) fn try_from_rel_path(path: &'a Path) -> Result<Self, ()> {
+impl<'a> TryFrom<&'a Path> for PageShape<'a> {
+    type Error = ();
+
+    /// Parses a relative Markdown path into its logical page shape.
+    fn try_from(path: &'a Path) -> Result<Self, Self::Error> {
         let mut components = Vec::new();
         for component in path.components() {
             let Component::Normal(segment) = component else {
                 return Err(());
             };
-            let segment = segment.to_str().ok_or(())?;
-            components.push(segment);
+            components.push(segment.to_str().ok_or(())?);
         }
 
         let file_name = components.pop().ok_or(())?;
@@ -75,10 +79,11 @@ impl<'a> PageShape<'a> {
         }
 
         if file_name == "index.md" {
-            if components.is_empty() {
-                return Ok(Self::Root);
-            }
-            return Ok(Self::Index(components));
+            return if components.is_empty() {
+                Ok(Self::Root)
+            } else {
+                Ok(Self::Index(components))
+            };
         }
 
         let stem = file_name.strip_suffix(".md").ok_or(())?;
@@ -90,11 +95,20 @@ impl<'a> PageShape<'a> {
     }
 }
 
+impl<'a> TryFrom<&'a RelPagePath> for PageShape<'a> {
+    type Error = ();
+
+    /// Reparses a relative page path into its logical page shape.
+    fn try_from(path: &'a RelPagePath) -> Result<Self, Self::Error> {
+        Self::try_from(path.as_ref())
+    }
+}
+
 impl From<PageShape<'_>> for RelPagePath {
     /// Builds a relative Markdown path from a classified page shape.
     fn from(page_shape: PageShape<'_>) -> Self {
-        let path = match page_shape {
-            PageShape::Root => PathBuf::from("index.md"),
+        match page_shape {
+            PageShape::Root => Self(PathBuf::from("index.md")),
             PageShape::File(segments) => {
                 let mut path = PathBuf::new();
                 let mut segments = segments.into_iter();
@@ -103,7 +117,7 @@ impl From<PageShape<'_>> for RelPagePath {
                     path.push(segment);
                 }
                 path.push(format!("{last_segment}.md"));
-                path
+                Self(path)
             }
             PageShape::Index(segments) => {
                 let mut path = PathBuf::new();
@@ -111,11 +125,9 @@ impl From<PageShape<'_>> for RelPagePath {
                     path.push(segment);
                 }
                 path.push("index.md");
-                path
+                Self(path)
             }
-        };
-
-        Self(path)
+        }
     }
 }
 
