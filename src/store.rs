@@ -8,8 +8,8 @@ use serde::de::DeserializeOwned;
 
 use crate::{
     Error, FlatPage, Result,
-    path::{page_path_from_normalized_url, path_to_url},
-    util::NormalizedUrl,
+    path::path_to_url,
+    util::{AbsPagePath, NormalizedUrl},
 };
 
 /// A store for [`FlatPageMeta`]
@@ -66,7 +66,7 @@ impl FlatPageStore {
             return Ok(None);
         }
 
-        let path = page_path_from_normalized_url(&self.root, url.as_ref());
+        let path = AbsPagePath::from_normalized_url(&self.root, &url);
         FlatPage::by_path(path)
     }
 }

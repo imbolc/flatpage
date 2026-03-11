@@ -9,7 +9,12 @@ impl RelPagePath {
     /// Converts a URL into a relative Markdown path.
     pub(crate) fn from_url(url: &str) -> Option<Self> {
         let url = NormalizedUrl::try_from(url).ok()?;
-        Some(Self(normalized_url_to_path(url.as_ref())))
+        Some(Self::from_normalized_url(&url))
+    }
+
+    /// Converts a normalized URL into a relative Markdown path.
+    pub(crate) fn from_normalized_url(url: &NormalizedUrl<'_>) -> Self {
+        Self(normalized_url_to_path(url.as_ref()))
     }
 }
 

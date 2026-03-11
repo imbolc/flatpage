@@ -12,13 +12,6 @@ pub(crate) fn is_valid_url_segment(segment: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || ALLOWED_IN_URL_SEGMENT.contains(c))
 }
 
-/// Converts an already normalized URL into an absolute Markdown path.
-pub(crate) fn page_path_from_normalized_url(root: &Path, url: &str) -> PathBuf {
-    let mut path = root.to_path_buf();
-    path.push(normalized_url_to_path(url));
-    path
-}
-
 /// Converts a relative Markdown path into its canonical URL form.
 pub(crate) fn path_to_url(path: &Path) -> Option<String> {
     let mut components = Vec::new();
@@ -97,21 +90,5 @@ mod tests {
         );
         assert_eq!(path_to_url(Path::new("../secret.md")), None);
         assert_eq!(path_to_url(Path::new("guides/../secret.md")), None);
-    }
-
-    #[test]
-    fn test_page_path_from_normalized_url() {
-        assert_eq!(
-            page_path_from_normalized_url(Path::new("pages"), "/"),
-            PathBuf::from("pages/index.md")
-        );
-        assert_eq!(
-            page_path_from_normalized_url(Path::new("pages"), "/guides/install"),
-            PathBuf::from("pages/guides/install.md")
-        );
-        assert_eq!(
-            page_path_from_normalized_url(Path::new("pages"), "/guides/install/"),
-            PathBuf::from("pages/guides/install/index.md")
-        );
     }
 }
