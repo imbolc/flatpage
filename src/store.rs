@@ -125,9 +125,8 @@ fn read_dir_recursive(
             StoreEntryKind::MarkdownFile => {}
             StoreEntryKind::Skip => continue,
         };
-        let relative_path = match path.strip_prefix(root) {
-            Ok(relative_path) => relative_path,
-            Err(_) => continue,
+        let Ok(relative_path) = path.strip_prefix(root) else {
+            continue;
         };
         let Ok(rel_path) = RelPagePath::try_from(relative_path) else {
             continue;
