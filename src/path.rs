@@ -2,6 +2,17 @@ use std::path::{Component, Path, PathBuf};
 
 const ALLOWED_IN_URL_SEGMENT: &str = "_-.";
 
+/// Converts a URL into an absolute page path under the given root.
+pub(crate) fn url_to_path(root: &Path, url: &str) -> Option<PathBuf> {
+    url_to_rel_path(url).map(|rel| root.join(rel))
+}
+
+/// Tries to convert the URL into a relative page path.
+fn url_to_rel_path(url: &str) -> Option<PathBuf> {
+    let url = normalize_url(url)?;
+    Some(normalized_url_to_path(&url))
+}
+
 /// Tries to normalize the URL.
 pub(crate) fn normalize_url(url: &str) -> Option<String> {
     if url.is_empty() {
@@ -52,17 +63,6 @@ fn is_valid_url_segment(segment: &str) -> bool {
         && segment
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || ALLOWED_IN_URL_SEGMENT.contains(c))
-}
-
-/// Tries to convert the URL into a relative Markdown path.
-pub(crate) fn url_to_path(url: &str) -> Option<PathBuf> {
-    let url = normalize_url(url)?;
-    Some(normalized_url_to_path(&url))
-}
-
-/// Converts a URL into an absolute Markdown path under the given root.
-pub(crate) fn page_path(root: &Path, url: &str) -> Option<PathBuf> {
-    url_to_path(url).map(|rel| root.join(rel))
 }
 
 /// Converts an already normalized URL into an absolute Markdown path.
@@ -131,25 +131,25 @@ mod tests {
 
     #[test]
     fn test_url_to_path() {
-        assert_eq!(url_to_path(""), None);
-        assert_eq!(url_to_path("#"), None);
-        assert_eq!(url_to_path("foo"), None);
-        assert_eq!(url_to_path("ы"), None);
-        assert_eq!(url_to_path("//foo"), None);
-        assert_eq!(url_to_path("foo//"), None);
-        assert_eq!(url_to_path("/../secret"), None);
-        assert_eq!(url_to_path("/foo//bar"), None);
-        assert_eq!(url_to_path("/").unwrap(), PathBuf::from("index.md"));
+        assert_eq!(url_to_rel_path(""), None);
+        assert_eq!(url_to_rel_path("#"), None);
+        assert_eq!(url_to_rel_path("foo"), None);
+        assert_eq!(url_to_rel_path("ы"), None);
+        assert_eq!(url_to_rel_path("//foo"), None);
+        assert_eq!(url_to_rel_path("foo//"), None);
+        assert_eq!(url_to_rel_path("/../secret"), None);
+        assert_eq!(url_to_rel_path("/foo//bar"), None);
+        assert_eq!(url_to_rel_path("/").unwrap(), PathBuf::from("index.md"));
         assert_eq!(
-            url_to_path("/foo-bar/baz").unwrap(),
+            url_to_rel_path("/foo-bar/baz").unwrap(),
             PathBuf::from("foo-bar/baz.md")
         );
         assert_eq!(
-            url_to_path("/foo-bar/baz/").unwrap(),
+            url_to_rel_path("/foo-bar/baz/").unwrap(),
             PathBuf::from("foo-bar/baz/index.md")
         );
         assert_eq!(
-            url_to_path("/foo.bar").unwrap(),
+            url_to_rel_path("/foo.bar").unwrap(),
             PathBuf::from("foo.bar.md")
         );
     }
