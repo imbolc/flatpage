@@ -83,7 +83,7 @@ impl FlatPageStore {
         };
         // Intentionally check the in-memory index first so missing pages avoid
         // filesystem access.
-        if !self.pages.contains_key(url.as_ref()) {
+        if !self.contains_url(url.as_ref()) {
             return Ok(None);
         }
 
