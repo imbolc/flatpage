@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use crate::path::url_to_rel_path;
+use super::rel_page_path::RelPagePath;
 
 /// Absolute Markdown path
 pub(crate) struct AbsPagePath(PathBuf);
@@ -8,7 +8,7 @@ pub(crate) struct AbsPagePath(PathBuf);
 impl AbsPagePath {
     /// Converts a URL into an absolute Markdown path under the given root.
     pub(crate) fn from_url(root: &Path, url: &str) -> Option<Self> {
-        url_to_rel_path(url).map(|rel| Self(root.join(rel)))
+        RelPagePath::from_url(url).map(|rel| Self(root.join(rel.as_ref())))
     }
 }
 

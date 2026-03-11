@@ -8,7 +8,7 @@ use serde::de::DeserializeOwned;
 use crate::{
     Error, Result,
     markdown::{markdown, resolve_title},
-    util::AbsPagePath,
+    util::abs_page_path::AbsPagePath,
 };
 
 #[derive(Debug, serde::Deserialize)]

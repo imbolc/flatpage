@@ -5,12 +5,6 @@ use std::{
 
 const ALLOWED_IN_URL_SEGMENT: &str = "_-.";
 
-/// Tries to convert the URL into a relative Markdown path.
-pub(crate) fn url_to_rel_path(url: &str) -> Option<PathBuf> {
-    let url = normalize_url(url)?;
-    Some(normalized_url_to_path(&url))
-}
-
 /// Tries to normalize the URL.
 pub(crate) fn normalize_url(url: &str) -> Option<Cow<'_, str>> {
     if url.is_empty() {
@@ -103,7 +97,7 @@ pub(crate) fn path_to_url(path: &Path) -> Option<String> {
 }
 
 /// Converts an already normalized URL into its relative Markdown file path.
-fn normalized_url_to_path(url: &str) -> PathBuf {
+pub(crate) fn normalized_url_to_path(url: &str) -> PathBuf {
     if url == "/" {
         return PathBuf::from("index.md");
     }
@@ -126,31 +120,6 @@ fn normalized_url_to_path(url: &str) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_url_to_path() {
-        assert_eq!(url_to_rel_path(""), None);
-        assert_eq!(url_to_rel_path("#"), None);
-        assert_eq!(url_to_rel_path("foo"), None);
-        assert_eq!(url_to_rel_path("ы"), None);
-        assert_eq!(url_to_rel_path("//foo"), None);
-        assert_eq!(url_to_rel_path("foo//"), None);
-        assert_eq!(url_to_rel_path("/../secret"), None);
-        assert_eq!(url_to_rel_path("/foo//bar"), None);
-        assert_eq!(url_to_rel_path("/").unwrap(), PathBuf::from("index.md"));
-        assert_eq!(
-            url_to_rel_path("/foo-bar/baz").unwrap(),
-            PathBuf::from("foo-bar/baz.md")
-        );
-        assert_eq!(
-            url_to_rel_path("/foo-bar/baz/").unwrap(),
-            PathBuf::from("foo-bar/baz/index.md")
-        );
-        assert_eq!(
-            url_to_rel_path("/foo.bar").unwrap(),
-            PathBuf::from("foo.bar.md")
-        );
-    }
 
     #[test]
     fn test_path_to_url() {
