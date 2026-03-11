@@ -8,6 +8,9 @@ use std::{
 };
 
 /// Temporary directory wrapper used by tests.
+///
+/// This intentionally manages temporary directory creation and cleanup
+/// manually to avoid pulling in extra dependencies for test support.
 pub(crate) struct TestDir {
     /// Filesystem path of the temporary directory.
     path: PathBuf,

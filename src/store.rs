@@ -104,6 +104,10 @@ impl<Extra> From<FlatPage<Extra>> for FlatPageMeta {
 
 /// Recursively walks the page tree and records metadata for valid Markdown
 /// files.
+///
+/// This intentionally performs a full scan by reading and parsing the entire
+/// content of each Markdown file to extract the title and description. That
+/// keeps the implementation simple at the cost of upfront I/O and parsing.
 fn read_dir_recursive(
     root: &Path,
     dir: &Path,
