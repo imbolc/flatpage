@@ -84,4 +84,15 @@ mod tests {
         assert_eq!(title_from_markdown("Foo"), "Foo");
         assert_eq!(title_from_markdown(""), "");
     }
+
+    #[test]
+    fn test_markdown_enables_extensions() {
+        assert!(markdown("~~gone~~").contains("<del>gone</del>"));
+        assert!(markdown("| head |\n| ---- |\n| body |").contains("<table>"));
+        assert!(markdown("- [x] done").contains("type=\"checkbox\""));
+
+        let footnotes = markdown("Text[^1]\n\n[^1]: note");
+        assert!(footnotes.contains("footnote-reference"));
+        assert!(footnotes.contains("footnote-definition"));
+    }
 }

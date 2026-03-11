@@ -98,7 +98,20 @@ impl<Extra: DeserializeOwned> FlatPage<Extra> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_helpers::{TestDir, write_page};
+    use crate::{
+        Error,
+        test_helpers::{TestDir, write_page},
+    };
+
+    fn assert_parse_frontmatter_error(content: &str) {
+        let root = TestDir::new();
+        let path = root.path().join("broken.md");
+        write_page(root.path(), "broken.md", content);
+
+        assert!(
+            matches!(FlatPage::<()>::by_path(&path), Err(Error::ParseFrontmatter { path: error_path, .. }) if error_path == path)
+        );
+    }
 
     #[test]
     fn flatpage_title() {
@@ -198,6 +211,32 @@ mod tests {
                 .unwrap()
                 .is_none()
         );
+    }
+
+    #[test]
+    fn flatpage_by_path_returns_none_for_missing_file() {
+        let root = TestDir::new();
+        let path = root.path().join("missing.md");
+
+        assert!(FlatPage::<()>::by_path(&path).unwrap().is_none());
+    }
+
+    #[cfg(feature = "json")]
+    #[test]
+    fn flatpage_by_path_reports_json_frontmatter_error() {
+        assert_parse_frontmatter_error("{\n  \"title\": \n}\n# Foo");
+    }
+
+    #[cfg(feature = "toml")]
+    #[test]
+    fn flatpage_by_path_reports_toml_frontmatter_error() {
+        assert_parse_frontmatter_error("+++\ntitle = \n+++\n# Foo");
+    }
+
+    #[cfg(feature = "yaml")]
+    #[test]
+    fn flatpage_by_path_reports_yaml_frontmatter_error() {
+        assert_parse_frontmatter_error("---\ntitle: [\n---\n# Foo");
     }
 
     #[cfg(feature = "json")]

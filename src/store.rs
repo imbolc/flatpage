@@ -146,7 +146,21 @@ fn read_dir_recursive(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_helpers::{TestDir, write_page};
+    use crate::{
+        Error,
+        test_helpers::{TestDir, write_page},
+    };
+
+    fn assert_read_dir_reports_parse_frontmatter_error(content: &str) {
+        let root = TestDir::new();
+        let broken_path = root.path().join("broken.md");
+        write_page(root.path(), "index.md", "# Home");
+        write_page(root.path(), "broken.md", content);
+
+        assert!(
+            matches!(FlatPageStore::read_dir(root.path()), Err(Error::ParseFrontmatter { path, .. }) if path == broken_path)
+        );
+    }
 
     #[test]
     fn flatpage_store_reads_nested_paths() {
@@ -233,5 +247,23 @@ mod tests {
         let store = FlatPageStore::read_dir(root.path()).unwrap();
         assert_eq!(store.meta_by_url("/").unwrap().title, "Home");
         assert!(store.meta_by_url("/broken").is_none());
+    }
+
+    #[cfg(feature = "json")]
+    #[test]
+    fn flatpage_store_reports_json_frontmatter_errors() {
+        assert_read_dir_reports_parse_frontmatter_error("{\n  \"title\": \n}\n# Foo");
+    }
+
+    #[cfg(feature = "toml")]
+    #[test]
+    fn flatpage_store_reports_toml_frontmatter_errors() {
+        assert_read_dir_reports_parse_frontmatter_error("+++\ntitle = \n+++\n# Foo");
+    }
+
+    #[cfg(feature = "yaml")]
+    #[test]
+    fn flatpage_store_reports_yaml_frontmatter_errors() {
+        assert_read_dir_reports_parse_frontmatter_error("---\ntitle: [\n---\n# Foo");
     }
 }
