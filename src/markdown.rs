@@ -46,7 +46,7 @@ fn atx_heading_title(line: &str) -> Option<&str> {
 }
 
 /// Renders Markdown to HTML using the crate's enabled extensions.
-pub(crate) fn markdown(text: &str) -> String {
+pub(crate) fn render_markdown(text: &str) -> String {
     let mut options = Options::empty();
     options.insert(Options::ENABLE_FOOTNOTES);
     options.insert(Options::ENABLE_STRIKETHROUGH);
@@ -84,11 +84,11 @@ mod tests {
 
     #[test]
     fn test_markdown_enables_extensions() {
-        assert!(markdown("~~gone~~").contains("<del>gone</del>"));
-        assert!(markdown("| head |\n| ---- |\n| body |").contains("<table>"));
-        assert!(markdown("- [x] done").contains("type=\"checkbox\""));
+        assert!(render_markdown("~~gone~~").contains("<del>gone</del>"));
+        assert!(render_markdown("| head |\n| ---- |\n| body |").contains("<table>"));
+        assert!(render_markdown("- [x] done").contains("type=\"checkbox\""));
 
-        let footnotes = markdown("Text[^1]\n\n[^1]: note");
+        let footnotes = render_markdown("Text[^1]\n\n[^1]: note");
         assert!(footnotes.contains("footnote-reference"));
         assert!(footnotes.contains("footnote-definition"));
     }

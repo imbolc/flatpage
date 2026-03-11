@@ -6,7 +6,7 @@ use serde::de::DeserializeOwned;
 
 use crate::{
     Error, Result,
-    markdown::{markdown, title_from_markdown},
+    markdown::{render_markdown, title_from_markdown},
     util::AbsPagePath,
 };
 
@@ -75,7 +75,7 @@ impl<Extra: DeserializeOwned> FlatPage<Extra> {
 
     /// [`FlatPage::body`] rendered to HTML
     pub fn html(&self) -> String {
-        markdown(&self.body)
+        render_markdown(&self.body)
     }
 
     /// Parses a page from text
