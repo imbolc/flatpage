@@ -6,7 +6,7 @@ use serde::de::DeserializeOwned;
 
 use crate::{
     Error, Result,
-    markdown::{markdown, resolve_title},
+    markdown::{markdown, title_from_markdown},
     util::AbsPagePath,
 };
 
@@ -89,7 +89,7 @@ impl<Extra: DeserializeOwned> FlatPage<Extra> {
             body,
         ) = markdown_frontmatter::parse::<Frontmatter<Extra>>(content)?;
         Ok(Self {
-            title: resolve_title(title, body),
+            title: title.unwrap_or_else(|| title_from_markdown(body).to_string()),
             description,
             body: body.to_string(),
             extra,

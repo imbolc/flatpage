@@ -4,16 +4,11 @@ use std::ops::Range;
 
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd, html, utils::TextMergeWithOffset};
 
-/// Resolves the page title from frontmatter or falls back to Markdown content.
-pub(crate) fn resolve_title(title: Option<String>, body: &str) -> String {
-    title.unwrap_or_else(|| title_from_markdown(body).to_string())
-}
-
 /// Uses the first non-empty line as the page title.
 ///
 /// Valid ATX headings have their opening `#` sequence and any optional closing
 /// markers removed, while preserving the remaining Markdown content.
-fn title_from_markdown(body: &str) -> &str {
+pub(crate) fn title_from_markdown(body: &str) -> &str {
     let line = body
         .lines()
         .find(|line| !line.trim().is_empty())
