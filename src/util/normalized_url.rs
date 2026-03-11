@@ -23,37 +23,24 @@ impl<'a> TryFrom<&'a str> for NormalizedUrl<'a> {
             return Err(());
         }
 
-        let trailing_slash = url.ends_with('/');
         let url = url.strip_prefix('/').unwrap_or(url);
-        let url = if trailing_slash {
+        let url = if url.ends_with('/') {
             url.strip_suffix('/').unwrap_or(url)
         } else {
             url
         };
 
-        if url.is_empty() || url.contains("//") {
+        if url.is_empty() {
             return Err(());
         }
 
-        let mut normalized = String::from("/");
-        for (index, segment) in url.split('/').enumerate() {
+        for segment in url.split('/') {
             if !is_valid_page_segment(segment) {
                 return Err(());
             }
-            if index > 0 {
-                normalized.push('/');
-            }
-            normalized.push_str(segment);
-        }
-        if trailing_slash {
-            normalized.push('/');
         }
 
-        if normalized == original_url {
-            return Ok(Self(Cow::Borrowed(original_url)));
-        }
-
-        Ok(Self(Cow::Owned(normalized)))
+        Ok(Self(Cow::Borrowed(original_url)))
     }
 }
 
@@ -112,6 +99,9 @@ mod tests {
 
         let page = NormalizedUrl::try_from("/foo/bar").unwrap();
         assert!(matches!(page.0, Cow::Borrowed("/foo/bar")));
+
+        let index = NormalizedUrl::try_from("/foo/bar/").unwrap();
+        assert!(matches!(index.0, Cow::Borrowed("/foo/bar/")));
     }
 
     #[test]
