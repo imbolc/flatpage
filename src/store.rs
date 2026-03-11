@@ -135,18 +135,12 @@ fn read_dir_recursive(
         let Ok(url) = NormalizedUrl::try_from(&rel_path) else {
             continue;
         };
-        let page_meta = match read_page_meta(&path)? {
-            Some(page_meta) => page_meta,
-            None => continue,
+        let Some(page_meta) = FlatPage::<()>::by_path(&path)?.map(Into::into) else {
+            continue;
         };
         pages.insert(url, page_meta);
     }
     Ok(())
-}
-
-/// Reads a page file and extracts the metadata stored in the index.
-fn read_page_meta(path: &Path) -> Result<Option<FlatPageMeta>> {
-    FlatPage::<()>::by_path(path).map(|page| page.map(Into::into))
 }
 
 #[cfg(test)]
