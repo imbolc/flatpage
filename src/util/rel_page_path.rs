@@ -4,6 +4,33 @@ use std::path::{Component, Path, PathBuf};
 
 use super::{NormalizedUrl, is_valid_page_segment};
 
+/// Relative Markdown path
+pub(crate) struct RelPagePath(PathBuf);
+
+impl From<&NormalizedUrl<'_>> for RelPagePath {
+    /// Converts a normalized URL into its relative Markdown path.
+    fn from(url: &NormalizedUrl<'_>) -> Self {
+        PageShape::from_normalized_url(url.as_ref()).into()
+    }
+}
+
+impl TryFrom<&Path> for RelPagePath {
+    type Error = ();
+
+    /// Validates and wraps a relative Markdown path.
+    fn try_from(path: &Path) -> Result<Self, Self::Error> {
+        PageShape::try_from_rel_path(path)?;
+        Ok(Self(path.to_path_buf()))
+    }
+}
+
+impl AsRef<Path> for RelPagePath {
+    /// Returns the wrapped relative path.
+    fn as_ref(&self) -> &Path {
+        self.0.as_ref()
+    }
+}
+
 /// Shared page-shape representation used by URL and path conversions.
 pub(super) enum PageShape<'a> {
     /// The root page (`/` or `index.md`).
@@ -61,14 +88,16 @@ impl<'a> PageShape<'a> {
         components.push(stem);
         Ok(Self::File(components))
     }
+}
 
+impl From<PageShape<'_>> for RelPagePath {
     /// Builds a relative Markdown path from a classified page shape.
-    fn to_rel_path_buf(&self) -> PathBuf {
-        match self {
-            Self::Root => PathBuf::from("index.md"),
-            Self::File(segments) => {
+    fn from(page_shape: PageShape<'_>) -> Self {
+        let path = match page_shape {
+            PageShape::Root => PathBuf::from("index.md"),
+            PageShape::File(segments) => {
                 let mut path = PathBuf::new();
-                let mut segments = segments.iter().copied();
+                let mut segments = segments.into_iter();
                 let last_segment = segments.next_back().unwrap_or_default();
                 for segment in segments {
                     path.push(segment);
@@ -76,7 +105,7 @@ impl<'a> PageShape<'a> {
                 path.push(format!("{last_segment}.md"));
                 path
             }
-            Self::Index(segments) => {
+            PageShape::Index(segments) => {
                 let mut path = PathBuf::new();
                 for segment in segments {
                     path.push(segment);
@@ -84,34 +113,9 @@ impl<'a> PageShape<'a> {
                 path.push("index.md");
                 path
             }
-        }
-    }
-}
+        };
 
-/// Relative Markdown path
-pub(crate) struct RelPagePath(PathBuf);
-
-impl From<&NormalizedUrl<'_>> for RelPagePath {
-    /// Converts a normalized URL into its relative Markdown path.
-    fn from(url: &NormalizedUrl<'_>) -> Self {
-        Self(PageShape::from_normalized_url(url.as_ref()).to_rel_path_buf())
-    }
-}
-
-impl TryFrom<&Path> for RelPagePath {
-    type Error = ();
-
-    /// Validates and wraps a relative Markdown path.
-    fn try_from(path: &Path) -> Result<Self, Self::Error> {
-        PageShape::try_from_rel_path(path)?;
-        Ok(Self(path.to_path_buf()))
-    }
-}
-
-impl AsRef<Path> for RelPagePath {
-    /// Returns the wrapped relative path.
-    fn as_ref(&self) -> &Path {
-        self.0.as_ref()
+        Self(path)
     }
 }
 
