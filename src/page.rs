@@ -77,7 +77,7 @@ impl<Extra: DeserializeOwned> FlatPage<Extra> {
             })
     }
 
-    /// [`FlatPage::body`] rendered to html
+    /// [`FlatPage::body`] rendered to HTML
     pub fn html(&self) -> String {
         markdown(&self.body)
     }

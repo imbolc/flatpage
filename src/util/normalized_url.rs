@@ -6,7 +6,7 @@ use super::{RelPagePath, is_valid_page_segment, rel_page_path::PageShape};
 
 /// Canonical page URL.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct NormalizedUrl<'a>(Cow<'a, str>);
+pub(crate) struct NormalizedUrl<'a>(Cow<'a, str>);
 
 impl<'a> TryFrom<&'a str> for NormalizedUrl<'a> {
     type Error = ();

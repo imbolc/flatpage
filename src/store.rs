@@ -19,7 +19,7 @@ pub struct FlatPageStore {
     /// The folder containing markdown pages
     root: PathBuf,
     /// Maps normalized URLs such as `/guides/install` to metadata.
-    pub pages: HashMap<NormalizedUrl<'static>, FlatPageMeta>,
+    pages: HashMap<NormalizedUrl<'static>, FlatPageMeta>,
 }
 
 /// Flat page metadata
@@ -49,6 +49,26 @@ impl FlatPageStore {
     pub fn meta_by_url(&self, url: &str) -> Option<&FlatPageMeta> {
         let url = NormalizedUrl::try_from(url).ok()?;
         self.pages.get(url.as_ref())
+    }
+
+    /// Returns whether a page exists in the in-memory index.
+    ///
+    /// Trailing slashes are significant: `/foo` looks up `foo.md`, while
+    /// `/foo/` looks up `foo/index.md`.
+    ///
+    /// Returns `false` for invalid URLs and missing pages.
+    pub fn contains_url(&self, url: &str) -> bool {
+        let Ok(url) = NormalizedUrl::try_from(url) else {
+            return false;
+        };
+        self.pages.contains_key(url.as_ref())
+    }
+
+    /// Iterates over cached metadata without exposing the internal URL type.
+    ///
+    /// The iteration order is unspecified.
+    pub fn iter(&self) -> impl Iterator<Item = (&str, &FlatPageMeta)> + '_ {
+        self.pages.iter().map(|(url, meta)| (url.as_ref(), meta))
     }
 
     /// Returns a page by URL.
@@ -183,6 +203,10 @@ mod tests {
             store.meta_by_url("/guides/v1.2").unwrap().title,
             "Versioned Guide"
         );
+        assert!(store.contains_url("/"));
+        assert!(store.contains_url("/guides/install"));
+        assert!(!store.contains_url("/guides"));
+        assert!(!store.contains_url("guides/install"));
         assert!(store.meta_by_url("/guides").is_none());
         assert!(store.meta_by_url("guides/install").is_none());
 
@@ -192,6 +216,21 @@ mod tests {
         let dotted = store.page_by_url::<()>("/guides/v1.2").unwrap().unwrap();
         assert_eq!(dotted.title, "Versioned Guide");
         assert!(store.page_by_url::<()>("guides/install").unwrap().is_none());
+
+        let mut pages = store
+            .iter()
+            .map(|(url, meta)| (url.to_string(), meta.title.clone()))
+            .collect::<Vec<_>>();
+        pages.sort();
+        assert_eq!(
+            pages,
+            vec![
+                ("/".to_string(), "Home".to_string()),
+                ("/guides/".to_string(), "Guides".to_string()),
+                ("/guides/install".to_string(), "Install".to_string()),
+                ("/guides/v1.2".to_string(), "Versioned Guide".to_string()),
+            ]
+        );
     }
 
     #[cfg(unix)]

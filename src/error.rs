@@ -3,6 +3,7 @@
 use std::{io, path::PathBuf};
 
 /// The crate's error type
+#[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// Failed to parse frontmatter.
