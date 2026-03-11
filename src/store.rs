@@ -8,7 +8,8 @@ use serde::de::DeserializeOwned;
 
 use crate::{
     Error, FlatPage, Result,
-    path::{normalize_url, page_path_from_normalized_url, path_to_url},
+    path::{page_path_from_normalized_url, path_to_url},
+    util::NormalizedUrl,
 };
 
 /// A store for [`FlatPageMeta`]
@@ -45,7 +46,7 @@ impl FlatPageStore {
     ///
     /// Returns `None` for invalid URLs and missing pages.
     pub fn meta_by_url(&self, url: &str) -> Option<&FlatPageMeta> {
-        let url = normalize_url(url)?;
+        let url = NormalizedUrl::try_from(url).ok()?;
         self.pages.get(url.as_ref())
     }
 
@@ -56,9 +57,8 @@ impl FlatPageStore {
     ///
     /// Returns `Ok(None)` for invalid URLs and missing pages.
     pub fn page_by_url<E: DeserializeOwned>(&self, url: &str) -> Result<Option<FlatPage<E>>> {
-        let url = match normalize_url(url) {
-            Some(url) => url,
-            None => return Ok(None),
+        let Ok(url) = NormalizedUrl::try_from(url) else {
+            return Ok(None);
         };
         // Intentionally check the in-memory index first so missing pages avoid
         // filesystem access.
@@ -66,7 +66,7 @@ impl FlatPageStore {
             return Ok(None);
         }
 
-        let path = page_path_from_normalized_url(&self.root, &url);
+        let path = page_path_from_normalized_url(&self.root, url.as_ref());
         FlatPage::by_path(path)
     }
 }

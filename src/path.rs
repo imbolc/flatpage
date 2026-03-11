@@ -1,54 +1,9 @@
-use std::{
-    borrow::Cow,
-    path::{Component, Path, PathBuf},
-};
+use std::path::{Component, Path, PathBuf};
 
 const ALLOWED_IN_URL_SEGMENT: &str = "_-.";
 
-/// Tries to normalize the URL.
-pub(crate) fn normalize_url(url: &str) -> Option<Cow<'_, str>> {
-    if url.is_empty() {
-        return None;
-    }
-
-    if url == "/" {
-        return Some("/".into());
-    }
-
-    if !url.starts_with('/') {
-        return None;
-    }
-
-    let trailing_slash = url.ends_with('/');
-    let url = url.strip_prefix('/').unwrap_or(url);
-    let url = if trailing_slash {
-        url.strip_suffix('/').unwrap_or(url)
-    } else {
-        url
-    };
-
-    if url.is_empty() || url.contains("//") {
-        return None;
-    }
-
-    let mut normalized = String::from("/");
-    for (index, segment) in url.split('/').enumerate() {
-        if !is_valid_url_segment(segment) {
-            return None;
-        }
-        if index > 0 {
-            normalized.push('/');
-        }
-        normalized.push_str(segment);
-    }
-    if trailing_slash {
-        normalized.push('/');
-    }
-    Some(normalized.into())
-}
-
 /// Returns whether a single URL path segment is accepted by the crate.
-fn is_valid_url_segment(segment: &str) -> bool {
+pub(crate) fn is_valid_url_segment(segment: &str) -> bool {
     !segment.is_empty()
         && segment != "."
         && segment != ".."
@@ -158,16 +113,5 @@ mod tests {
             page_path_from_normalized_url(Path::new("pages"), "/guides/install/"),
             PathBuf::from("pages/guides/install/index.md")
         );
-    }
-
-    #[test]
-    fn test_normalize_url_rejects_empty_segments() {
-        assert_eq!(normalize_url("foo"), None);
-        assert_eq!(normalize_url("//foo"), None);
-        assert_eq!(normalize_url("foo//"), None);
-        assert_eq!(normalize_url("foo//bar"), None);
-        assert_eq!(normalize_url("////"), None);
-        assert_eq!(normalize_url("/foo/").as_deref(), Some("/foo/"));
-        assert_eq!(normalize_url("/foo").as_deref(), Some("/foo"));
     }
 }
