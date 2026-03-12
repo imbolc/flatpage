@@ -1,11 +1,11 @@
-//! Shared page-shape mapping used by URL and path conversions.
+//! Shared page-location mapping used by URL and path conversions.
 
 use std::path::{Component, Path};
 
 use super::{NormalizedUrl, RelPagePath, is_valid_page_segment};
 
-/// Shared page-shape representation used by URL and path conversions.
-pub(super) enum PageShape<'a> {
+/// Shared page-location representation used by URL and path conversions.
+pub(super) enum PageLocation<'a> {
     /// The root page (`/` or `index.md`).
     Root,
     /// A leaf page such as `/guides/install`.
@@ -14,8 +14,8 @@ pub(super) enum PageShape<'a> {
     Index(Vec<&'a str>),
 }
 
-impl<'a> From<&'a NormalizedUrl<'_>> for PageShape<'a> {
-    /// Splits a normalized URL into its logical page shape.
+impl<'a> From<&'a NormalizedUrl<'_>> for PageLocation<'a> {
+    /// Splits a normalized URL into its logical page location.
     fn from(url: &'a NormalizedUrl<'_>) -> Self {
         let url = url.as_ref();
         if url == "/" {
@@ -31,10 +31,10 @@ impl<'a> From<&'a NormalizedUrl<'_>> for PageShape<'a> {
     }
 }
 
-impl<'a> TryFrom<&'a Path> for PageShape<'a> {
+impl<'a> TryFrom<&'a Path> for PageLocation<'a> {
     type Error = ();
 
-    /// Parses a relative Markdown path into its logical page shape.
+    /// Parses a relative Markdown path into its logical page location.
     fn try_from(path: &'a Path) -> Result<Self, Self::Error> {
         let mut components = Vec::new();
         for component in path.components() {
@@ -68,10 +68,10 @@ impl<'a> TryFrom<&'a Path> for PageShape<'a> {
     }
 }
 
-impl<'a> TryFrom<&'a RelPagePath> for PageShape<'a> {
+impl<'a> TryFrom<&'a RelPagePath> for PageLocation<'a> {
     type Error = ();
 
-    /// Parses the wrapped relative page path into its logical page shape.
+    /// Parses the wrapped relative page path into its logical page location.
     fn try_from(path: &'a RelPagePath) -> Result<Self, Self::Error> {
         Self::try_from(path.as_ref())
     }

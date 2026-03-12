@@ -2,8 +2,8 @@
 
 pub(crate) mod abs_page_path;
 pub(crate) mod normalized_url;
+mod page_location;
 pub(crate) mod page_segment;
-mod page_shape;
 pub(crate) mod rel_page_path;
 
 pub(crate) use abs_page_path::AbsPagePath;

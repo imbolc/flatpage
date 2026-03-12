@@ -2,7 +2,7 @@
 
 use std::borrow::{Borrow, Cow};
 
-use super::{RelPagePath, is_valid_page_segment, page_shape::PageShape};
+use super::{RelPagePath, is_valid_page_segment, page_location::PageLocation};
 
 /// Canonical page URL.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -61,13 +61,13 @@ impl Borrow<str> for NormalizedUrl<'_> {
     }
 }
 
-impl From<PageShape<'_>> for NormalizedUrl<'static> {
-    /// Converts a validated page shape into a normalized URL.
-    fn from(page_shape: PageShape<'_>) -> Self {
-        match page_shape {
-            PageShape::Root => Self(Cow::Borrowed("/")),
-            PageShape::File(segments) => Self(Cow::Owned(format!("/{}", segments.join("/")))),
-            PageShape::Index(segments) => Self(Cow::Owned(format!("/{}/", segments.join("/")))),
+impl From<PageLocation<'_>> for NormalizedUrl<'static> {
+    /// Converts a validated page location into a normalized URL.
+    fn from(page_location: PageLocation<'_>) -> Self {
+        match page_location {
+            PageLocation::Root => Self(Cow::Borrowed("/")),
+            PageLocation::File(segments) => Self(Cow::Owned(format!("/{}", segments.join("/")))),
+            PageLocation::Index(segments) => Self(Cow::Owned(format!("/{}/", segments.join("/")))),
         }
     }
 }
@@ -77,7 +77,7 @@ impl TryFrom<&RelPagePath> for NormalizedUrl<'static> {
 
     /// Converts a validated relative page path into a normalized URL.
     fn try_from(path: &RelPagePath) -> Result<Self, Self::Error> {
-        Ok(PageShape::try_from(path)?.into())
+        Ok(PageLocation::try_from(path)?.into())
     }
 }
 

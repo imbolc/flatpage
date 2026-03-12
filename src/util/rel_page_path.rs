@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use super::{NormalizedUrl, page_shape::PageShape};
+use super::{NormalizedUrl, page_location::PageLocation};
 
 /// Relative Markdown path
 pub(crate) struct RelPagePath(PathBuf);
@@ -10,7 +10,7 @@ pub(crate) struct RelPagePath(PathBuf);
 impl From<&NormalizedUrl<'_>> for RelPagePath {
     /// Converts a normalized URL into its relative Markdown path.
     fn from(url: &NormalizedUrl<'_>) -> Self {
-        PageShape::from(url).into()
+        PageLocation::from(url).into()
     }
 }
 
@@ -19,7 +19,7 @@ impl TryFrom<&Path> for RelPagePath {
 
     /// Validates and wraps a relative Markdown path.
     fn try_from(path: &Path) -> Result<Self, Self::Error> {
-        PageShape::try_from(path)?;
+        PageLocation::try_from(path)?;
         Ok(Self(path.to_path_buf()))
     }
 }
@@ -31,12 +31,12 @@ impl AsRef<Path> for RelPagePath {
     }
 }
 
-impl From<PageShape<'_>> for RelPagePath {
-    /// Builds a relative Markdown path from a classified page shape.
-    fn from(page_shape: PageShape<'_>) -> Self {
-        match page_shape {
-            PageShape::Root => Self(PathBuf::from("index.md")),
-            PageShape::File(segments) => {
+impl From<PageLocation<'_>> for RelPagePath {
+    /// Builds a relative Markdown path from a classified page location.
+    fn from(page_location: PageLocation<'_>) -> Self {
+        match page_location {
+            PageLocation::Root => Self(PathBuf::from("index.md")),
+            PageLocation::File(segments) => {
                 let mut path = PathBuf::new();
                 let mut segments = segments.into_iter();
                 let last_segment = segments.next_back().unwrap_or_default();
@@ -46,7 +46,7 @@ impl From<PageShape<'_>> for RelPagePath {
                 path.push(format!("{last_segment}.md"));
                 Self(path)
             }
-            PageShape::Index(segments) => {
+            PageLocation::Index(segments) => {
                 let mut path = PathBuf::new();
                 for segment in segments {
                     path.push(segment);
