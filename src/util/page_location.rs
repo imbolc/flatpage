@@ -9,7 +9,12 @@ pub(super) enum PageLocation<'a> {
     /// The root page (`/` or `index.md`).
     Root,
     /// A leaf page such as `/guides/install`.
-    File(Vec<&'a str>),
+    File {
+        /// Parent path segments such as `["guides"]`.
+        path: Vec<&'a str>,
+        /// The last page segment without the `.md` suffix, such as `"install"`.
+        name: &'a str,
+    },
     /// A directory index page such as `/guides/`.
     Index(Vec<&'a str>),
 }
@@ -22,11 +27,19 @@ impl<'a> From<&'a NormalizedUrl<'_>> for PageLocation<'a> {
             return Self::Root;
         }
 
-        let segments = url.trim_matches('/').split('/').collect();
+        let trimmed = url.trim_matches('/');
         if url.ends_with('/') {
-            Self::Index(segments)
+            Self::Index(trimmed.split('/').collect())
+        } else if let Some((path, name)) = trimmed.rsplit_once('/') {
+            Self::File {
+                path: path.split('/').collect(),
+                name,
+            }
         } else {
-            Self::File(segments)
+            Self::File {
+                path: Vec::new(),
+                name: trimmed,
+            }
         }
     }
 }
@@ -63,8 +76,10 @@ impl<'a> TryFrom<&'a Path> for PageLocation<'a> {
         if !is_valid_page_segment(stem) {
             return Err(());
         }
-        components.push(stem);
-        Ok(Self::File(components))
+        Ok(Self::File {
+            path: components,
+            name: stem,
+        })
     }
 }
 

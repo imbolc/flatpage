@@ -36,14 +36,15 @@ impl From<PageLocation<'_>> for RelPagePath {
     fn from(page_location: PageLocation<'_>) -> Self {
         match page_location {
             PageLocation::Root => Self(PathBuf::from("index.md")),
-            PageLocation::File(segments) => {
+            PageLocation::File {
+                path: parent_segments,
+                name,
+            } => {
                 let mut path = PathBuf::new();
-                let mut segments = segments.into_iter();
-                let last_segment = segments.next_back().unwrap_or_default();
-                for segment in segments {
+                for segment in parent_segments {
                     path.push(segment);
                 }
-                path.push(format!("{last_segment}.md"));
+                path.push(format!("{name}.md"));
                 Self(path)
             }
             PageLocation::Index(segments) => {

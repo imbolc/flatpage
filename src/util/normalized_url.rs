@@ -66,7 +66,13 @@ impl From<PageLocation<'_>> for NormalizedUrl<'static> {
     fn from(page_location: PageLocation<'_>) -> Self {
         match page_location {
             PageLocation::Root => Self(Cow::Borrowed("/")),
-            PageLocation::File(segments) => Self(Cow::Owned(format!("/{}", segments.join("/")))),
+            PageLocation::File { path, name } => {
+                if path.is_empty() {
+                    Self(Cow::Owned(format!("/{name}")))
+                } else {
+                    Self(Cow::Owned(format!("/{}/{name}", path.join("/"))))
+                }
+            }
             PageLocation::Index(segments) => Self(Cow::Owned(format!("/{}/", segments.join("/")))),
         }
     }
