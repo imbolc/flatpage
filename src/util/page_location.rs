@@ -5,6 +5,7 @@ use std::path::{Component, Path};
 use super::{NormalizedUrl, RelPagePath, is_valid_page_segment};
 
 /// Shared page-location representation used by URL and path conversions.
+#[derive(Debug, Eq, PartialEq)]
 pub(super) enum PageLocation<'a> {
     /// The root page (`/` or `index.md`).
     Root,
@@ -89,5 +90,49 @@ impl<'a> TryFrom<&'a RelPagePath> for PageLocation<'a> {
     /// Parses the wrapped relative page path into its logical page location.
     fn try_from(path: &'a RelPagePath) -> Result<Self, Self::Error> {
         Self::try_from(path.as_ref())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::PageLocation;
+    use crate::util::{NormalizedUrl, RelPagePath};
+
+    #[test]
+    fn test_page_location_shapes() {
+        assert_eq!(
+            PageLocation::from(&NormalizedUrl::try_from("/").unwrap()),
+            PageLocation::Root
+        );
+        assert_eq!(
+            PageLocation::from(&NormalizedUrl::try_from("/guides/install").unwrap()),
+            PageLocation::File {
+                path: vec!["guides"],
+                name: "install",
+            }
+        );
+        assert_eq!(
+            PageLocation::from(&NormalizedUrl::try_from("/guides/").unwrap()),
+            PageLocation::Index(vec!["guides"])
+        );
+
+        assert_eq!(
+            PageLocation::try_from(Path::new("index.md")).unwrap(),
+            PageLocation::Root
+        );
+        assert_eq!(
+            PageLocation::try_from(Path::new("guides/install.md")).unwrap(),
+            PageLocation::File {
+                path: vec!["guides"],
+                name: "install",
+            }
+        );
+        assert_eq!(
+            PageLocation::try_from(&RelPagePath::try_from(Path::new("guides/index.md")).unwrap())
+                .unwrap(),
+            PageLocation::Index(vec!["guides"])
+        );
     }
 }
