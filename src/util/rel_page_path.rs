@@ -64,41 +64,26 @@ mod tests {
     use std::path::Path;
 
     use super::RelPagePath;
+    use crate::util::NormalizedUrl;
 
     #[test]
-    fn test_try_from_path() {
+    fn test_from_normalized_url() {
         assert_eq!(
-            RelPagePath::try_from(Path::new("index.md"))
-                .unwrap()
-                .as_ref(),
+            RelPagePath::from(&NormalizedUrl::try_from("/").unwrap()).as_ref(),
             Path::new("index.md")
         );
         assert_eq!(
-            RelPagePath::try_from(Path::new(".md/index.md"))
-                .unwrap()
-                .as_ref(),
-            Path::new(".md/index.md")
+            RelPagePath::from(&NormalizedUrl::try_from("/install").unwrap()).as_ref(),
+            Path::new("install.md")
         );
         assert_eq!(
-            RelPagePath::try_from(Path::new("guides/getting-started.md"))
-                .unwrap()
+            RelPagePath::from(&NormalizedUrl::try_from("/guides/getting-started").unwrap())
                 .as_ref(),
             Path::new("guides/getting-started.md")
         );
         assert_eq!(
-            RelPagePath::try_from(Path::new("guides/index.md"))
-                .unwrap()
-                .as_ref(),
+            RelPagePath::from(&NormalizedUrl::try_from("/guides/").unwrap()).as_ref(),
             Path::new("guides/index.md")
         );
-        assert_eq!(
-            RelPagePath::try_from(Path::new("guides/v1.2.md"))
-                .unwrap()
-                .as_ref(),
-            Path::new("guides/v1.2.md")
-        );
-        assert!(RelPagePath::try_from(Path::new("../secret.md")).is_err());
-        assert!(RelPagePath::try_from(Path::new("guides/../secret.md")).is_err());
-        assert!(RelPagePath::try_from(Path::new("guides/readme.txt")).is_err());
     }
 }

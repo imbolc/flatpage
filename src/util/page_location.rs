@@ -98,10 +98,10 @@ mod tests {
     use std::path::Path;
 
     use super::PageLocation;
-    use crate::util::{NormalizedUrl, RelPagePath};
+    use crate::util::NormalizedUrl;
 
     #[test]
-    fn test_page_location_shapes() {
+    fn test_from_normalized_url() {
         assert_eq!(
             PageLocation::from(&NormalizedUrl::try_from("/").unwrap()),
             PageLocation::Root
@@ -117,10 +117,17 @@ mod tests {
             PageLocation::from(&NormalizedUrl::try_from("/guides/").unwrap()),
             PageLocation::Index(vec!["guides"])
         );
+    }
 
+    #[test]
+    fn test_try_from_path() {
         assert_eq!(
             PageLocation::try_from(Path::new("index.md")).unwrap(),
             PageLocation::Root
+        );
+        assert_eq!(
+            PageLocation::try_from(Path::new(".md/index.md")).unwrap(),
+            PageLocation::Index(vec![".md"])
         );
         assert_eq!(
             PageLocation::try_from(Path::new("guides/install.md")).unwrap(),
@@ -130,9 +137,19 @@ mod tests {
             }
         );
         assert_eq!(
-            PageLocation::try_from(&RelPagePath::try_from(Path::new("guides/index.md")).unwrap())
-                .unwrap(),
+            PageLocation::try_from(Path::new("guides/index.md")).unwrap(),
             PageLocation::Index(vec!["guides"])
         );
+        assert_eq!(
+            PageLocation::try_from(Path::new("guides/v1.2.md")).unwrap(),
+            PageLocation::File {
+                path: vec!["guides"],
+                name: "v1.2",
+            }
+        );
+
+        assert!(PageLocation::try_from(Path::new("../secret.md")).is_err());
+        assert!(PageLocation::try_from(Path::new("guides/../secret.md")).is_err());
+        assert!(PageLocation::try_from(Path::new("guides/readme.txt")).is_err());
     }
 }
