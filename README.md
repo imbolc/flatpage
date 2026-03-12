@@ -2,44 +2,15 @@
 [![Crates.io](https://img.shields.io/crates/v/flatpage.svg)](https://crates.io/crates/flatpage)
 [![Docs.rs](https://docs.rs/flatpage/badge.svg)](https://docs.rs/flatpage)
 
-A simple file system based markdown flat page.
-
-## Folder structure
-
-Only characters allowed in urls are ASCII, numbers and hyphen with underscore.
-Urls map to files by simply substituting `/` to `^` and adding `.md` extension.
-I believe it should eliminate all kinds of security issues.
-
-| url            | file name         |
-| -------------- | ----------------- |
-| `/`            | `^.md`            |
-| `/foo/bar-baz` | `^foo^bar-baz.md` |
-
-## Page format
-
-File could provide title and description in frontmatter. `flatpage` proxies
-`markdown-frontmatter` features, so you can parse YAML (`---`), TOML (`+++`)
-and JSON (`{ ... }`) depending on enabled features. If there's no frontmatter
-the first line would be considered the title (and cleaned from possible header
-marker `#`).
-
-| File content                                         | [`title`] | [`description`] | [`body`]       | [`html()`]                     |
-| ---------------------------------------------------- | --------- | --------------- | -------------- | ------------------------------ |
-| `# Foo`<br>`Bar`                                     | `"Foo"`   | `None`          | `"# Foo\nBar"` | `"<h1>Foo</h1>\n<p>Bar</p>\n"` |
-| `---`<br>`description: Bar`<br>`---`<br>`# Foo`      | `"Foo"`   | `Some("Bar")`   | `"# Foo"`      | `"<h1>Foo</h1>\n"`             |
-| `---`<br>`title: Foo`<br>`description: Bar`<br>`---` | `"Foo"`   | `Some("Bar")`   | `""`           | `""`                           |
-
-## Features
-
-- `yaml`: enable YAML frontmatter support
-- `toml`: enable TOML frontmatter support
-- `json`: enable JSON frontmatter support
-- `full`: enable all formats (`json`, `toml`, `yaml`) - enabled by default
+A simple filesystem-based Markdown page loader.
 
 ## Reading a page
 
-```rust
-let root_folder = "./";
+`FlatPage::by_url` returns `Ok(None)` for invalid URLs and missing pages. It
+returns `Err` only for I/O failures and frontmatter parsing errors.
+
+```rust,no_run
+let root_folder = "./pages";
 if let Some(home) = flatpage::FlatPage::<()>::by_url(root_folder, "/").unwrap() {
     println!("title: {}", home.title);
     println!("description: {:?}", home.description);
@@ -52,33 +23,93 @@ if let Some(home) = flatpage::FlatPage::<()>::by_url(root_folder, "/").unwrap() 
 
 ## Extra frontmatter fields
 
-You can define extra statically typed frontmatter fields
+You can define extra statically typed frontmatter fields.
 
-```rust
+```rust,no_run
 #[derive(Debug, serde::Deserialize)]
 struct Extra {
     slug: String,
 }
 
-let _page = flatpage::FlatPage::<Extra>::by_url("./", "/").unwrap();
+if let Some(page) = flatpage::FlatPage::<Extra>::by_url("./pages", "/").unwrap() {
+    println!("slug: {}", page.extra.slug);
+}
 ```
 
 ## Cached metadata
 
-It's a common for a page to have a list of related pages. To avoid reading all
-the files each time, you can use [`FlatPageStore`] to cache pages [`metadata`]
-(titles and descriptions).
+You can cache page [`metadata`] (titles and descriptions) using
+[`FlatPageStore`]. This lets you check if page exists or search for sub-pages
+without filesystem calls.
 
-```rust
-let root_folder = "./";
+```rust,no_run
+let root_folder = "./pages";
 let store = flatpage::FlatPageStore::read_dir(root_folder).unwrap();
+
+// Reading metadata
 if let Some(meta) = store.meta_by_url("/") {
     println!("title: {}", meta.title);
     println!("description: {:?}", meta.description);
 } else {
     println!("No home page");
 }
+
+// Reading pages
+if let Some(page) = store.page_by_url::<()>("/").unwrap() {
+    // The page itself read from the file system
+    println!("{:?}", page);
+} else {
+    // No filesystem calls were made to check that the page doesn't exist
+    println!("No home page");
+}
+
+// Checking if a page exists without filesystem calls
+if store.contains_url("/foo/") {
+    println!("The page exists");
+}
+
+// Searching for sub-pages without filesystem calls
+let prefix = "/foo/";
+let sub_page_metas = store
+    .iter()
+    .filter(|(url, _meta)| url.starts_with(prefix));
 ```
+
+## Folder structure
+
+The only characters allowed in URL segments are ASCII letters, numbers, hyphens,
+underscores, and dots. URLs map to nested Markdown files, and `index.md` is used
+for `/` and folder index pages. Trailing slashes are significant, so `/foo` and
+`/foo/` map to different files. Empty path segments plus `.` and `..` are
+rejected.
+
+| Url        | File name      |
+| ---------- | -------------- |
+| `/`        | `index.md`     |
+| `/foo`     | `foo.md`       |
+| `/foo/`    | `foo/index.md` |
+| `/foo/bar` | `foo/bar.md`   |
+
+## Page format
+
+A file can provide a title and description in frontmatter. `flatpage` proxies
+`markdown-frontmatter` features, so you can parse YAML (`---`), TOML (`+++`),
+and JSON (`{ ... }`) depending on the enabled features. If there's no
+frontmatter, the first non-empty line is considered the title. For ATX headings,
+`flatpage` strips the heading markers but preserves the remaining Markdown.
+
+| File content                                         | [`title`] | [`description`] | [`body`]       | [`html()`]                     |
+| ---------------------------------------------------- | --------- | --------------- | -------------- | ------------------------------ |
+| `# Foo`<br>`Bar`                                     | `"Foo"`   | `None`          | `"# Foo\nBar"` | `"<h1>Foo</h1>\n<p>Bar</p>\n"` |
+| `+++`<br>`description = "Bar"`<br>`+++`<br>`# Foo`   | `"Foo"`   | `Some("Bar")`   | `"# Foo"`      | `"<h1>Foo</h1>\n"`             |
+| `---`<br>`title: Foo`<br>`description: Bar`<br>`---` | `"Foo"`   | `Some("Bar")`   | `""`           | `""`                           |
+
+## Features
+
+- `yaml`: enable YAML frontmatter support
+- `toml`: enable TOML frontmatter support
+- `json`: enable JSON frontmatter support
+- `full`: enable all formats (`json`, `toml`, `yaml`) - enabled by default
 
 [`title`]: FlatPage::title
 [`description`]: FlatPage::description

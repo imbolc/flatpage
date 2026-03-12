@@ -1,0 +1,343 @@
+//! Directory-backed page metadata indexing.
+
+use std::{
+    collections::HashMap,
+    fs, io,
+    path::{Path, PathBuf},
+};
+
+use serde::de::DeserializeOwned;
+
+use crate::{
+    Error, FlatPage, Result,
+    util::{AbsPagePath, NormalizedUrl, RelPagePath},
+};
+
+/// A store for [`FlatPageMeta`]
+#[derive(Debug)]
+pub struct FlatPageStore {
+    /// The folder containing markdown pages
+    root: PathBuf,
+    /// Maps normalized URLs such as `/guides/install` to metadata.
+    pages: HashMap<NormalizedUrl<'static>, FlatPageMeta>,
+}
+
+/// Flat page metadata
+#[derive(Debug)]
+pub struct FlatPageMeta {
+    /// Page title
+    pub title: String,
+    /// Page description
+    pub description: Option<String>,
+}
+
+impl FlatPageStore {
+    /// Creates a store by scanning the folder recursively.
+    pub fn read_dir(root: impl Into<PathBuf>) -> Result<Self> {
+        let root = root.into();
+        let mut pages = HashMap::new();
+        read_dir_recursive(&root, &root, &mut pages)?;
+        Ok(Self { root, pages })
+    }
+
+    /// Returns page metadata by URL.
+    ///
+    /// Trailing slashes are significant: `/foo` looks up `foo.md`, while
+    /// `/foo/` looks up `foo/index.md`.
+    ///
+    /// Returns `None` for invalid URLs and missing pages.
+    pub fn meta_by_url(&self, url: &str) -> Option<&FlatPageMeta> {
+        let url = NormalizedUrl::try_from(url).ok()?;
+        self.pages.get(url.as_ref())
+    }
+
+    /// Returns whether a page exists in the in-memory index.
+    ///
+    /// Trailing slashes are significant: `/foo` looks up `foo.md`, while
+    /// `/foo/` looks up `foo/index.md`.
+    ///
+    /// Returns `false` for invalid URLs and missing pages.
+    pub fn contains_url(&self, url: &str) -> bool {
+        let Ok(url) = NormalizedUrl::try_from(url) else {
+            return false;
+        };
+        self.pages.contains_key(url.as_ref())
+    }
+
+    /// Iterates over cached metadata without exposing the internal URL type.
+    ///
+    /// The iteration order is unspecified.
+    pub fn iter(&self) -> impl Iterator<Item = (&str, &FlatPageMeta)> + '_ {
+        self.pages.iter().map(|(url, meta)| (url.as_ref(), meta))
+    }
+
+    /// Returns a page by URL.
+    ///
+    /// Trailing slashes are significant: `/foo` looks up `foo.md`, while
+    /// `/foo/` looks up `foo/index.md`.
+    ///
+    /// Returns `Ok(None)` for invalid URLs and missing pages.
+    pub fn page_by_url<E: DeserializeOwned>(&self, url: &str) -> Result<Option<FlatPage<E>>> {
+        let Ok(url) = NormalizedUrl::try_from(url) else {
+            return Ok(None);
+        };
+        // Intentionally check the in-memory index first so missing pages avoid
+        // filesystem access.
+        if !self.pages.contains_key(url.as_ref()) {
+            return Ok(None);
+        }
+
+        let path = AbsPagePath::from_normalized_url(&self.root, &url);
+        FlatPage::by_path(path)
+    }
+}
+
+impl<Extra> From<FlatPage<Extra>> for FlatPageMeta {
+    /// Converts a full page into the cached metadata representation.
+    fn from(p: FlatPage<Extra>) -> Self {
+        Self {
+            title: p.title,
+            description: p.description,
+        }
+    }
+}
+
+/// Recursively walks the page tree and records metadata for valid Markdown
+/// files.
+///
+/// This intentionally performs a full scan by reading and parsing the entire
+/// content of each Markdown file to extract the title and description. That
+/// keeps the implementation simple at the cost of upfront I/O and parsing.
+fn read_dir_recursive(
+    root: &Path,
+    dir: &Path,
+    pages: &mut HashMap<NormalizedUrl<'static>, FlatPageMeta>,
+) -> Result<()> {
+    for entry in fs::read_dir(dir).map_err(|e| Error::read_dir(e, dir))? {
+        let entry = entry.map_err(|e| Error::read_dir(e, dir))?;
+        let path = entry.path();
+        let file_type = entry.file_type().map_err(|e| Error::read_dir(e, dir))?;
+        match StoreEntryKind::classify(&path, &file_type)? {
+            StoreEntryKind::Directory => {
+                read_dir_recursive(root, &path, pages)?;
+                continue;
+            }
+            StoreEntryKind::MarkdownFile => {}
+            StoreEntryKind::Skip => continue,
+        };
+        let Ok(relative_path) = path.strip_prefix(root) else {
+            continue;
+        };
+        let Ok(rel_path) = RelPagePath::try_from(relative_path) else {
+            continue;
+        };
+        let Ok(url) = NormalizedUrl::try_from(&rel_path) else {
+            continue;
+        };
+        let Some(page_meta) = FlatPage::<()>::by_path(&path)?.map(Into::into) else {
+            continue;
+        };
+        pages.insert(url, page_meta);
+    }
+    Ok(())
+}
+
+/// Classification of a directory entry during store scanning.
+enum StoreEntryKind {
+    /// Recursively scan this directory.
+    Directory,
+    /// Parse this Markdown file into store metadata.
+    MarkdownFile,
+    /// Ignore this entry.
+    Skip,
+}
+
+impl StoreEntryKind {
+    /// Classifies a directory entry for the store scan.
+    fn classify(path: &Path, file_type: &fs::FileType) -> Result<Self> {
+        let md_ext = Some(std::ffi::OsStr::new("md"));
+
+        if file_type.is_symlink() {
+            if path.extension() != md_ext {
+                return Ok(Self::Skip);
+            }
+            let metadata = match fs::metadata(path) {
+                Ok(metadata) => metadata,
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                    return Ok(Self::Skip);
+                }
+                Err(error) => return Err(Error::read_metadata(error, path)),
+            };
+            return Ok(if metadata.is_file() {
+                Self::MarkdownFile
+            } else {
+                Self::Skip
+            });
+        }
+
+        if file_type.is_dir() {
+            return Ok(Self::Directory);
+        }
+
+        Ok(if file_type.is_file() && path.extension() == md_ext {
+            Self::MarkdownFile
+        } else {
+            Self::Skip
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        Error,
+        test_helpers::{TestDir, write_page},
+    };
+
+    fn assert_read_dir_reports_parse_frontmatter_error(content: &str) {
+        let root = TestDir::new();
+        let broken_path = root.path().join("broken.md");
+        write_page(root.path(), "index.md", "# Home");
+        write_page(root.path(), "broken.md", content);
+
+        assert!(
+            matches!(FlatPageStore::read_dir(root.path()), Err(Error::ParseFrontmatter { path, .. }) if path == broken_path)
+        );
+    }
+
+    #[test]
+    fn flatpage_store_reads_nested_paths() {
+        let root = TestDir::new();
+        write_page(root.path(), "index.md", "# Home");
+        write_page(root.path(), "guides/index.md", "# Guides");
+        write_page(root.path(), "guides/install.md", "# Install");
+        write_page(root.path(), "guides/v1.2.md", "# Versioned Guide");
+
+        let store = FlatPageStore::read_dir(root.path()).unwrap();
+        assert_eq!(store.meta_by_url("/").unwrap().title, "Home");
+        assert_eq!(store.meta_by_url("/guides/").unwrap().title, "Guides");
+        assert_eq!(
+            store.meta_by_url("/guides/install").unwrap().title,
+            "Install"
+        );
+        assert_eq!(
+            store.meta_by_url("/guides/v1.2").unwrap().title,
+            "Versioned Guide"
+        );
+        assert!(store.contains_url("/"));
+        assert!(store.contains_url("/guides/install"));
+        assert!(!store.contains_url("/guides"));
+        assert!(!store.contains_url("guides/install"));
+        assert!(store.meta_by_url("/guides").is_none());
+        assert!(store.meta_by_url("guides/install").is_none());
+
+        let page = store.page_by_url::<()>("/guides/install").unwrap().unwrap();
+        assert_eq!(page.title, "Install");
+
+        let dotted = store.page_by_url::<()>("/guides/v1.2").unwrap().unwrap();
+        assert_eq!(dotted.title, "Versioned Guide");
+        assert!(store.page_by_url::<()>("guides/install").unwrap().is_none());
+
+        let mut pages = store
+            .iter()
+            .map(|(url, meta)| (url.to_string(), meta.title.clone()))
+            .collect::<Vec<_>>();
+        pages.sort();
+        assert_eq!(
+            pages,
+            vec![
+                ("/".to_string(), "Home".to_string()),
+                ("/guides/".to_string(), "Guides".to_string()),
+                ("/guides/install".to_string(), "Install".to_string()),
+                ("/guides/v1.2".to_string(), "Versioned Guide".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn flatpage_store_reports_read_dir_error() {
+        let root = TestDir::new();
+        let path = root.path().join("index.md");
+        write_page(root.path(), "index.md", "# Home");
+
+        assert!(
+            matches!(FlatPageStore::read_dir(&path), Err(Error::ReadDir { path: error_path, .. }) if error_path == path)
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn flatpage_store_ignores_symlinked_directories() {
+        use std::os::unix::fs::symlink;
+
+        let root = TestDir::new();
+        let external = TestDir::new();
+        write_page(root.path(), "index.md", "# Home");
+        write_page(external.path(), "secret.md", "# Secret");
+
+        symlink(external.path(), root.path().join("linked")).unwrap();
+
+        let store = FlatPageStore::read_dir(root.path()).unwrap();
+        assert_eq!(store.meta_by_url("/").unwrap().title, "Home");
+        assert!(store.meta_by_url("/linked/secret").is_none());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn flatpage_store_reads_symlinked_files() {
+        use std::os::unix::fs::symlink;
+
+        let root = TestDir::new();
+        let external = TestDir::new();
+        write_page(root.path(), "index.md", "# Home");
+        write_page(external.path(), "install.md", "# Install");
+
+        symlink(
+            external.path().join("install.md"),
+            root.path().join("install.md"),
+        )
+        .unwrap();
+
+        let store = FlatPageStore::read_dir(root.path()).unwrap();
+        assert_eq!(store.meta_by_url("/").unwrap().title, "Home");
+        assert_eq!(store.meta_by_url("/install").unwrap().title, "Install");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn flatpage_store_skips_broken_symlinked_files() {
+        use std::os::unix::fs::symlink;
+
+        let root = TestDir::new();
+        write_page(root.path(), "index.md", "# Home");
+
+        symlink(
+            root.path().join("missing.md"),
+            root.path().join("broken.md"),
+        )
+        .unwrap();
+
+        let store = FlatPageStore::read_dir(root.path()).unwrap();
+        assert_eq!(store.meta_by_url("/").unwrap().title, "Home");
+        assert!(store.meta_by_url("/broken").is_none());
+    }
+
+    #[cfg(feature = "json")]
+    #[test]
+    fn flatpage_store_reports_json_frontmatter_errors() {
+        assert_read_dir_reports_parse_frontmatter_error("{\n  \"title\": \n}\n# Foo");
+    }
+
+    #[cfg(feature = "toml")]
+    #[test]
+    fn flatpage_store_reports_toml_frontmatter_errors() {
+        assert_read_dir_reports_parse_frontmatter_error("+++\ntitle = \n+++\n# Foo");
+    }
+
+    #[cfg(feature = "yaml")]
+    #[test]
+    fn flatpage_store_reports_yaml_frontmatter_errors() {
+        assert_read_dir_reports_parse_frontmatter_error("---\ntitle: [\n---\n# Foo");
+    }
+}

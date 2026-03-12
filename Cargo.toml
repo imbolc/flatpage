@@ -1,10 +1,10 @@
 [package]
-description = "A simple file system based markdown flat page"
+description = "A simple filesystem-based Markdown page loader"
 edition = "2024"
 license = "MIT"
 name = "flatpage"
 repository = "https://github.com/imbolc/flatpage"
-version = "0.3.0"
+version = "1.0.0"
 
 [package.metadata.docs.rs]
 all-features = true
