@@ -2,7 +2,7 @@
 
 use std::borrow::{Borrow, Cow};
 
-use super::{RelPagePath, is_valid_page_segment, rel_page_path::PageShape};
+use super::{RelPagePath, is_valid_page_segment, page_shape::PageShape};
 
 /// Canonical page URL.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
