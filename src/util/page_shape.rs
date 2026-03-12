@@ -71,7 +71,7 @@ impl<'a> TryFrom<&'a Path> for PageShape<'a> {
 impl<'a> TryFrom<&'a RelPagePath> for PageShape<'a> {
     type Error = ();
 
-    /// Reparses a relative page path into its logical page shape.
+    /// Parses the wrapped relative page path into its logical page shape.
     fn try_from(path: &'a RelPagePath) -> Result<Self, Self::Error> {
         Self::try_from(path.as_ref())
     }
